@@ -132,7 +132,7 @@
 			</form>
 		</div>
 		<div id="loading_deploy" style="display: none; top: 0; left: 0; z-index: 99999; position: fixed; width: 100%; height: 100%; background: rgba(255,255,255,0.95);">
-			<img src="<?php echo plugin_dir_url(''); ?>relation-output-html/templates/loading.webp" alt="carregando" style="position: relative; margin: 7% auto; width: 300px; display: block; opacity:0.8;">
+			<img src="<?php echo plugin_dir_url(''); ?>wp-relation-output-html/templates/loading.webp" alt="carregando" style="position: relative; margin: 7% auto; width: 300px; display: block; opacity:0.8;">
 			<h1 style="text-align:center; top: 0; left: 0; width: 100%; margin: 30% auto; text-align: center; position: absolute;">Aguarde, estamos processando o HTML ...</h1>
 		</div>
 		<script>
