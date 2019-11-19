@@ -237,9 +237,26 @@ Class RelOutputHtml {
 		}
 
 		$this->json_generate();
+		sleep(1);
+		$this->subfiles_generate();
+		sleep(1);
 		$this->curl_generate(null, true);
 
+	}
 
+
+	public function subfiles_generate(){
+
+		// Generate FILE 1
+		$files = explode(',', get_option("subfiles_rlout"));
+
+		foreach ($files as $key => $file) {
+
+			if(!empty($file)){
+
+				$this->deploy_upload($file);
+			}
+		}
 	}
 
 	public function json_generate(){
@@ -426,6 +443,10 @@ Class RelOutputHtml {
 
 		$curl = curl_init();
 
+		$url = explode('?', $url);
+
+		$url = $url[0];
+
 		curl_setopt_array($curl, array(
 			CURLOPT_URL => $url,
 			CURLOPT_RETURNTRANSFER => true,
@@ -475,6 +496,34 @@ Class RelOutputHtml {
 					$dir_base = $dir_base . '/' . $folder;
 					if( is_dir($dir_base) === false ){
 						mkdir($dir_base);
+					}
+				}
+			}
+
+			$css = explode(".cs", end($folders));
+			if(!empty($css[1])){
+				$attrs = explode("url(", $response);
+				if(empty($attrs)){
+					$attrs = explode("url (", $response);
+				}
+
+				if(!empty($attrs)){
+					unset($attrs[0]);
+					foreach ($attrs as $key_att => $attr) {
+						$http = explode("http", $attr);
+						if(!$http[1]){
+							$attr = explode(")", $attr);
+							$attr = str_replace('"', '', $attr[0]);
+							$attr = str_replace("'", "", $attr);
+
+							$attr = $dir_base  . '/' . $attr;
+							
+							$attr = str_replace(get_home_path() . 'html/', '', $attr);
+
+							$attr = get_template_directory_uri() . $attr;
+
+							$this->deploy_upload($attr);
+						}
 					}
 				}
 			}
@@ -711,6 +760,9 @@ Class RelOutputHtml {
 
 			$fields['api_1_rlout'] = array('type'=>'repeater','label'=>'URL API AJAX STATIC<br>
 				<small>Default: ('.site_url().'/wp-admin/admin-ajax.php?action=<u>EXEMPLO</u>)</small>');
+
+			$fields['subfiles_rlout'] = array('type'=>'repeater','label'=>'Arquivos ignorados<br>
+				<small>insira a URL de todos os arquivos que foram ignorados pelo sistema.</small>');
 
 			$fields['s3_rlout'] = array('type'=>'label','label'=>'Storage AWS S3');
 
