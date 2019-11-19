@@ -237,7 +237,7 @@ Class RelOutputHtml {
 		}
 
 		$this->json_generate();
-		$this->curl_generate(null, $true);
+		$this->curl_generate(null, true);
 
 
 	}
