@@ -316,7 +316,7 @@ Class RelOutputHtml {
 		}
 
 		if($home){
-			$url = site_url();
+			$url = site_url('/');
 		}
 
 		$curl = curl_init();
