@@ -50,7 +50,7 @@
 
 						<tr>
 							<td>
-								<a style="position: absolute; margin-left: 650px; margin-top: 60px;" href="javascript:adicionar_api();">Adicionar nova API AJAX</a>
+								<a href="javascript:;" style="position: absolute; margin-left: 650px; margin-top: 60px;" class="adicionar_api_rlout">Adicionar campo</a>
 							</td>
 						</tr>
 
@@ -141,10 +141,12 @@
 					jQuery("#loading_deploy").fadeIn();
 				});
 			}
-			function adicionar_api(){
-				jQuery(function(){
+			
+			jQuery(function(){
 
-					var $tr = jQuery("#api_1_rlout").closest('tr');
+				jQuery(".adicionar_api_rlout").click(function(){
+
+					var $tr = jQuery(this).closest('tr').next();
 
         			// Now the one above it
         			// var $trAbove = $tr.prev('tr');
@@ -152,5 +154,5 @@
         			// Now insert the clone
         			$tr.clone().insertBefore($tr);
         		});
-			}
-		</script>
+        	});
+        </script>
