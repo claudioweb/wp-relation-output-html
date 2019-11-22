@@ -85,8 +85,7 @@
 									<label for="<?php echo $key_field; ?>"><?php echo $field['label']; ?></label>
 								</th>
 								<td>
-									<input name="<?php echo $key_field; ?>" type="checkbox" id="<?php echo $key_field; ?>" value="true" class="regular-text" <?php if(!empty(get_option($key_field))){echo'checked';} ?>> <small> Todas as imagens em: <br>
-										(<b><?php echo wp_upload_dir()['baseurl']; ?></b>) serão TRANSFERIDAS</small>
+									<input name="<?php echo $key_field; ?>" type="checkbox" id="<?php echo $key_field; ?>" value="true" class="regular-text" <?php if(!empty(get_option($key_field))){echo'checked';} ?>> 
 									</td>
 								</tr>
 							<?php endif; ?>

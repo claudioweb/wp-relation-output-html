@@ -16,10 +16,15 @@ Class RelOutputHtml {
 
 	private $name_plugin;
 
+	private $repeat_files_rlout;
+
 	public function __construct() {
 
 		$this->name_plugin = 'Relation Output HTML';
 
+		$this->repeat_files_rlout = array();
+
+		add_action('init', array($this, 'blog_public') );
 		add_action( 'admin_menu', array( $this, 'add_admin_menu' ));
 
 		// verifica alterações de POST
@@ -89,6 +94,19 @@ Class RelOutputHtml {
 			$redirect_param = sanitize_title($this->name_plugin) . '-config';
 
 			header('Location:'.admin_url('admin.php?&loading_deploy=true&page='.$redirect_param));
+		}
+	}
+
+	public function blog_public(){
+
+		$robots = get_option('robots_rlout');
+
+		if($robots){
+
+			update_option('blog_public', '0');
+		}else{
+
+			update_option('blog_public', '1');
 		}
 	}
 
@@ -226,6 +244,10 @@ Class RelOutputHtml {
 	}
 
 	public function deploy($objs=null){
+
+		update_option('robots_rlout', '0');
+		update_option('blog_public', '1');
+		sleep(1);
 		
 		if(!empty($objs)){
 
@@ -241,7 +263,8 @@ Class RelOutputHtml {
 		$this->subfiles_generate();
 		sleep(1);
 		$this->curl_generate(null, true);
-
+		sleep(1);
+		update_option('robots_rlout', '1');
 	}
 
 
@@ -255,6 +278,7 @@ Class RelOutputHtml {
 			if(!empty($file)){
 
 				$this->deploy_upload($file);
+				$this->repeat_files_rlout[] = $file;
 			}
 		}
 	}
@@ -415,6 +439,7 @@ Class RelOutputHtml {
 
 			if(!empty($item)){
 				$this->deploy_upload($item, $media);
+				$this->repeat_files_rlout[] = $item;
 			}
 		}
 
@@ -441,101 +466,104 @@ Class RelOutputHtml {
 
 	public function deploy_upload($url, $media=null){
 
-		$curl = curl_init();
+		if(!in_array($url, $this->repeat_files_rlout)){
 
-		$url = explode('?', $url);
+			$curl = curl_init();
 
-		$url = $url[0];
+			$url = explode('?', $url);
 
-		curl_setopt_array($curl, array(
-			CURLOPT_URL => $url,
-			CURLOPT_RETURNTRANSFER => true,
-			CURLOPT_ENCODING => "",
-			CURLOPT_MAXREDIRS => 10,
-			CURLOPT_TIMEOUT => 30,
-			CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-			CURLOPT_CUSTOMREQUEST => "GET",
-			CURLOPT_HTTPHEADER => array(
-				"cache-control: no-cache"
-			),
-		));
+			$url = $url[0];
 
-		$response = curl_exec($curl);
-		$err = curl_error($curl);
+			curl_setopt_array($curl, array(
+				CURLOPT_URL => $url,
+				CURLOPT_RETURNTRANSFER => true,
+				CURLOPT_ENCODING => "",
+				CURLOPT_MAXREDIRS => 10,
+				CURLOPT_TIMEOUT => 30,
+				CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+				CURLOPT_CUSTOMREQUEST => "GET",
+				CURLOPT_HTTPHEADER => array(
+					"cache-control: no-cache"
+				),
+			));
 
-		curl_close($curl);
+			$response = curl_exec($curl);
+			$err = curl_error($curl);
 
-		if ($err) {
-			echo "cURL Error #:" . $err;
-		} else {
+			curl_close($curl);
 
-			$response = $this->replace_json($response);
+			if ($err) {
+				echo "cURL Error #:" . $err;
+			} else {
 
-			$dir_base =  get_home_path() . 'html';
-			if( is_dir($dir_base) === false ){
-				mkdir($dir_base);
-			}
+				$response = $this->replace_json($response);
 
-			if($media){
-				$dir_base =  get_home_path() . 'html' . $media;
+				$dir_base =  get_home_path() . 'html';
 				if( is_dir($dir_base) === false ){
 					mkdir($dir_base);
 				}
-			}
 
-			if($media){
-				$upload_url = wp_upload_dir();
-				$file_name = str_replace($upload_url['baseurl'], '', $url);
-			}else{
-				$file_name = str_replace(get_template_directory_uri(), '', $url);
-			}
-
-			$folders = explode("/", $file_name);
-			foreach ($folders as $key => $folder) {
-				if($key+1<count($folders)){
-					$dir_base = $dir_base . '/' . $folder;
+				if($media){
+					$dir_base =  get_home_path() . 'html' . $media;
 					if( is_dir($dir_base) === false ){
 						mkdir($dir_base);
 					}
 				}
-			}
 
-			$css = explode(".cs", end($folders));
-			if(!empty($css[1])){
-				$attrs = explode("url(", $response);
-				if(empty($attrs)){
-					$attrs = explode("url (", $response);
+				if($media){
+					$upload_url = wp_upload_dir();
+					$file_name = str_replace($upload_url['baseurl'], '', $url);
+				}else{
+					$file_name = str_replace(get_template_directory_uri(), '', $url);
 				}
 
-				if(!empty($attrs)){
-					unset($attrs[0]);
-					foreach ($attrs as $key_att => $attr) {
-						$http = explode("http", $attr);
-						if(!$http[1]){
-							$attr = explode(")", $attr);
-							$attr = str_replace('"', '', $attr[0]);
-							$attr = str_replace("'", "", $attr);
-
-							$attr = $dir_base  . '/' . $attr;
-							
-							$attr = str_replace(get_home_path() . 'html/', '', $attr);
-
-							$attr = get_template_directory_uri() . $attr;
-
-							$this->deploy_upload($attr);
+				$folders = explode("/", $file_name);
+				foreach ($folders as $key => $folder) {
+					if($key+1<count($folders)){
+						$dir_base = $dir_base . '/' . $folder;
+						if( is_dir($dir_base) === false ){
+							mkdir($dir_base);
 						}
 					}
 				}
+
+				$css = explode(".cs", end($folders));
+				if(!empty($css[1])){
+					$attrs = explode("url(", $response);
+					if(empty($attrs)){
+						$attrs = explode("url (", $response);
+					}
+
+					if(!empty($attrs)){
+						unset($attrs[0]);
+						foreach ($attrs as $key_att => $attr) {
+							$http = explode("http", $attr);
+							if(!$http[1]){
+								$attr = explode(")", $attr);
+								$attr = str_replace('"', '', $attr[0]);
+								$attr = str_replace("'", "", $attr);
+
+								$attr = $dir_base  . '/' . $attr;
+
+								$attr = str_replace(get_home_path() . 'html/', '', $attr);
+
+								$attr = get_template_directory_uri() . $attr;
+
+								$this->deploy_upload($attr);
+								$this->repeat_files_rlout[] = $attr;
+							}
+						}
+					}
+				}
+
+				$file = fopen( $dir_base . '/' . end($folders),"w");
+
+				fwrite($file, $response);
+
+				$this->ftp_upload_file($dir_base . '/' . end($folders));
+				$this->s3_upload_file($dir_base . '/' . end($folders));
 			}
-
-			$file = fopen( $dir_base . '/' . end($folders),"w");
-
-			fwrite($file, $response);
-
-			$this->ftp_upload_file($dir_base . '/' . end($folders));
-			$this->s3_upload_file($dir_base . '/' . end($folders));
 		}
-
 	}
 
 	public function replace_json($response){
@@ -754,7 +782,10 @@ Class RelOutputHtml {
 			$fields['taxonomies_rlout'] = array('type'=>'select', 'label'=>'Taxonomy para deploy', 'multiple'=>'multiple');
 			$fields['taxonomies_rlout']['options'] = get_taxonomies();
 
-			$fields['uploads_rlout'] = array('type'=>'checkbox', 'label'=>'Transformar UPLOADS');
+			$fields['uploads_rlout'] = array('type'=>'checkbox', 'label'=>"<small> Todas as imagens em: <br>
+				(<b>".wp_upload_dir()['baseurl']."</b>) serão TRANSFERIDAS</small>");
+
+			$fields['robots_rlout'] = array('type'=>'checkbox', 'label'=>'Evitar mecanismos de pesquisa em: '.site_url());
 
 			//$fields['horario_cron_rlout'] = array('type'=>'time', 'label'=>'Horário para sincronização diária');
 
