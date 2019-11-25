@@ -29,10 +29,13 @@ Class RelOutputHtml {
 
 		// verifica alterações de POST
 		add_action( 'publish_post', array($this, 'post_auto_deploy'));
+		add_action( 'publish_page', array($this, 'post_auto_deploy'));
 
 		add_action( 'pre_post_update', array($this, 'post_delete_folder'));
+		add_action( 'pre_page_update', array($this, 'post_delete_folder'));
 
 		add_action( 'trash_post',  array($this, 'post_delete_folder'));
+		add_action( 'trash_page',  array($this, 'post_delete_folder'));
 
 		// verifica alterações de TERMS
 		add_action( 'edit_term', array($this, 'term_delete_folder'), 10, 3);
