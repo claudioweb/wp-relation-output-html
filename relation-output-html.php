@@ -448,7 +448,11 @@ Class RelOutputHtml {
 
 
 		//replace url
-		$rpl = get_option('replace_url_rlout') . $media;
+		$rpl = get_option('replace_url_rlout');
+		if(empty($rpl)){
+			$rpl = site_url();
+		}
+		$rpl = $rpl . $media;
 		if(!empty($rpl) && $rpl!=site_url() && $rpl!=$url_replace){
 
 			$response = str_replace($url_replace, $rpl, $response);
