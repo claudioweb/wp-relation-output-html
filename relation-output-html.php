@@ -41,6 +41,14 @@ Class RelOutputHtml {
 		add_action( 'edit_term', array($this, 'term_delete_folder'), 10, 3);
 		add_action( 'delete_term', array($this, 'term_delete_folder'), 10, 3);
 
+		add_action('wp_ajax_posts', array($this, 'api_posts') );
+   		// Definindo action para acesso público
+		add_action('wp_ajax_nopriv_posts', array($this, 'api_posts') );
+
+		add_action('wp_ajax_terms', array($this, 'api_terms') );
+   		// Definindo action para acesso público
+		add_action('wp_ajax_nopriv_terms', array($this, 'api_terms') );
+
 		//removendo Infos Header
 		remove_action('wp_head', 'print_emoji_detection_script', 7);
 		remove_action('wp_print_styles', 'print_emoji_styles');
@@ -407,6 +415,8 @@ Class RelOutputHtml {
 
 			$file = fopen( $dir_base . '/index.html',"w");
 
+			$file_json = fopen( $dir_base . '/index.json',"w");
+
 			$replace_uploads = get_option('uploads_rlout');
 
 			if($replace_uploads){
@@ -422,227 +432,378 @@ Class RelOutputHtml {
 
 			$this->ftp_upload_file($dir_base . '/index.html');
 			$this->s3_upload_file($dir_base . '/index.html');
+
+			if(term_exists($object->term_id)){
+				$this->object_term($object);
+			}else{
+				$this->object_post($object);
+			}
+
+			$response_json = $this->replace_reponse(get_template_directory_uri(), json_encode($object));
+
+			fwrite($file_json,  $response_json);
+
+			$this->ftp_upload_file($dir_base . '/index.json');
+			$this->s3_upload_file($dir_base . '/index.json');
 		}
 
 	}
 
-	public function replace_reponse($url_replace, $response, $media=null){
+	public function url_json_obj($object){
 
-
-		// pegando itens 
-		$itens_theme = explode($url_replace, $response);
-
-		unset($itens_theme[0]);
-		foreach($itens_theme as $keyj => $item){
-
-			$item = explode('"', $item);
-			$item = explode("'", $item[0]);
-			$item = explode(")", $item[0]);
-			$item = $url_replace . $item[0];
-
-			if(!empty($item)){
-				$this->deploy_upload($item, $media);
-				$this->repeat_files_rlout[] = $item;
-			}
-		}
-
-
-		//replace url
+		$dir_base =  get_home_path() . 'html';
 		$rpl = get_option('replace_url_rlout');
 		if(empty($rpl)){
-			$rpl = site_url();
+			$rpl = site_url().'/html';
 		}
-		$rpl = $rpl . $media;
-		if(!empty($rpl) && $rpl!=site_url() && $rpl!=$url_replace){
 
-			$response = str_replace($url_replace, $rpl, $response);
-			if(!$media){
-				$response = str_replace(site_url(), $rpl, $response);
-			}
+		if(term_exists($object->term_id)){
+
+			$object->term_json = str_replace(site_url(), $rpl, get_term_link($object)) . 'index.json';
 		}else{
 
-			$rpl_theme = explode(site_url(), $url_replace);
-			$rpl = site_url('html'.$media);
-
-			$response = str_replace($rpl_theme[1], '', $response);
-			$response = str_replace(site_url(), $rpl, $response);
+			$object->post_json = str_replace(site_url(), $rpl, get_permalink($object)) . 'index.json';
 		}
 
-		return $response;
+		return $object;
 	}
 
-	public function deploy_upload($url, $media=null){
+	public function object_post($object, $show_terms=true){
 
-		if(!in_array($url, $this->repeat_files_rlout)){
+		unset($object->post_author);
+		unset($object->comment_status);
+		unset($object->ping_status);
+		unset($object->post_password);
+		unset($object->to_ping);
+		unset($object->pinged);
+		unset($object->post_content_filtered);
+		unset($object->post_parent);
+		unset($object->guid);
+		unset($object->post_mime_type);
+		unset($object->comment_count);
+		unset($object->filter);
 
-			$curl = curl_init();
+		$object = $this->url_json_obj($object);
 
-			$url = explode('?', $url);
+		$object->post_type = $object->post_type;
 
-			$url = $url[0];
+		$object->thumbnails = array();
+		$object->thumbnails['thumbnail'] = get_the_post_thumbnail_url($object, 'thumbnail');
+		$object->thumbnails['medium'] = get_the_post_thumbnail_url($object, 'medium');
+		$object->thumbnails['large'] = get_the_post_thumbnail_url($object, 'large');
+		$object->thumbnails['full'] = get_the_post_thumbnail_url($object, 'full');
+		
+		if($show_terms){
+			$terms = wp_get_post_terms($object->ID, explode(",", get_option('taxonomies_rlout')) );
+			$object->terms = array();
+			foreach ($terms as $keyterm => $term) {
+				$object->terms[] = $this->object_term($term, false);
+			}
+		}
 
-			curl_setopt_array($curl, array(
-				CURLOPT_URL => $url,
-				CURLOPT_RETURNTRANSFER => true,
-				CURLOPT_ENCODING => "",
-				CURLOPT_MAXREDIRS => 10,
-				CURLOPT_TIMEOUT => 30,
-				CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-				CURLOPT_CUSTOMREQUEST => "GET",
-				CURLOPT_HTTPHEADER => array(
-					"cache-control: no-cache"
-				),
-			));
+		$object->metas =  get_post_meta($object->ID);
 
-			$response = curl_exec($curl);
-			$err = curl_error($curl);
+		return $object;
 
-			curl_close($curl);
+	}
 
-			if ($err) {
-				echo "cURL Error #:" . $err;
-			} else {
+	public function object_term($object, $show_posts=true){
 
-				$response = $this->replace_json($response);
+		unset($object->term_group);
+		unset($object->term_taxonomy_id);
+		unset($object->parent);
+		unset($object->filter);
 
-				$dir_base =  get_home_path() . 'html';
-				if( is_dir($dir_base) === false ){
-					mkdir($dir_base);
+		$object = $this->url_json_obj($object);
+
+		$args_posts = array();
+		$args_posts['post_types'] = explode(",", get_option('post_types_rlout'));
+		$args_posts['posts_per_page'] = -1;
+		$args_posts['order'] = 'DESC';
+		$args_posts['orderby'] = 'post_modified';
+		$args_posts['tax_query'][0]['taxonomy'] = $object->taxonomy;
+		$args_posts['tax_query'][0]['terms'] = array($object->term_id);
+
+		if($show_posts){
+			$posts = get_posts($args_posts);
+			$object->posts = array();
+			foreach ($posts as $key_p => $post) {
+
+				$post = $this->object_post($post);
+
+				$object->posts[$key_p]['post_title'] = $post->post_title;
+				$object->posts[$key_p]['thumbnail'] = $post->thumbnails['thumbnail'];
+				$object->posts[$key_p]['post_json'] = $post->post_json;
+			}
+		}
+
+		$object->metas = get_term_meta($object->term_id);
+
+		return $object;
+	}
+
+	public function api_posts(){
+
+		header( "Content-type: application/json");
+
+		$posts = get_posts(
+			array(
+				'post_type'=>explode(",", get_option('post_types_rlout')),
+					'posts_per_page' => -1,
+					'order'=>'DESC',
+					'orderby'=>'post_modified'
+				)
+			);
+
+			$posts_arr = array();
+			foreach ($posts as $key => $post) {
+
+				$post = $this->object_post($post);
+
+				$posts_arr[$key]['post_type'] = $post->post_type;
+				$posts_arr[$key]['post_title'] = $post->post_title;
+				$posts_arr[$key]['thumbnail'] = $post->thumbnails['thumbnail'];
+				$posts_arr[$key]['post_json'] = $post->post_json;
+				foreach ($post->terms as $key_t => $term) {
+					$posts_arr[$key]['terms'][$key_t]['name'] = $term->name;
+					$posts_arr[$key]['terms'][$key_t]['term_json'] = $term->term_json;
 				}
+			}
 
-				if($media){
-					$dir_base =  get_home_path() . 'html' . $media;
+			die(json_encode($posts_arr));
+		}
+
+		public function api_terms(){
+
+
+			header( "Content-type: application/json");
+
+			$terms = get_terms(explode(",", get_option('taxonomies_rlout')));	
+
+			foreach ($terms as $key => $term) {
+				$term = $this->object_term($term, false);
+			}
+
+			die(json_encode($terms));
+		}
+
+		public function replace_reponse($url_replace, $response, $media=null){
+
+
+			// pegando itens 
+			$itens_theme = explode($url_replace, $response);
+
+			unset($itens_theme[0]);
+			foreach($itens_theme as $keyj => $item){
+
+				$item = explode('"', $item);
+				$item = explode("'", $item[0]);
+				$item = explode(")", $item[0]);
+				$item = $url_replace . $item[0];
+
+				if(!empty($item)){
+					$this->deploy_upload($item, $media);
+					$this->repeat_files_rlout[] = $item;
+				}
+			}
+
+
+			//replace url
+			$rpl = get_option('replace_url_rlout');
+			if(empty($rpl)){
+				$rpl = site_url();
+			}
+			$rpl = $rpl . $media;
+			if(!empty($rpl) && $rpl!=site_url() && $rpl!=$url_replace){
+
+				$response = str_replace($url_replace, $rpl, $response);
+				if(!$media){
+					$response = str_replace(site_url(), $rpl, $response);
+				}
+			}else{
+
+				$rpl_theme = explode(site_url(), $url_replace);
+				$rpl = site_url('html'.$media);
+
+				$response = str_replace($rpl_theme[1], '', $response);
+				$response = str_replace(site_url(), $rpl, $response);
+			}
+
+			return $response;
+		}
+
+		public function deploy_upload($url, $media=null){
+
+			if(!in_array($url, $this->repeat_files_rlout)){
+
+				$curl = curl_init();
+
+				$url = explode('?', $url);
+
+				$url = $url[0];
+
+				curl_setopt_array($curl, array(
+					CURLOPT_URL => $url,
+					CURLOPT_RETURNTRANSFER => true,
+					CURLOPT_ENCODING => "",
+					CURLOPT_MAXREDIRS => 10,
+					CURLOPT_TIMEOUT => 30,
+					CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+					CURLOPT_CUSTOMREQUEST => "GET",
+					CURLOPT_HTTPHEADER => array(
+						"cache-control: no-cache"
+					),
+				));
+
+				$response = curl_exec($curl);
+				$err = curl_error($curl);
+
+				curl_close($curl);
+
+				if ($err) {
+					echo "cURL Error #:" . $err;
+				} else {
+
+					$response = $this->replace_json($response);
+
+					$dir_base =  get_home_path() . 'html';
 					if( is_dir($dir_base) === false ){
 						mkdir($dir_base);
 					}
-				}
 
-				if($media){
-					$upload_url = wp_upload_dir();
-					$file_name = str_replace($upload_url['baseurl'], '', $url);
-				}else{
-					$file_name = str_replace(get_template_directory_uri(), '', $url);
-				}
-
-				$folders = explode("/", $file_name);
-				foreach ($folders as $key => $folder) {
-					if($key+1<count($folders)){
-						$dir_base = $dir_base . '/' . $folder;
+					if($media){
+						$dir_base =  get_home_path() . 'html' . $media;
 						if( is_dir($dir_base) === false ){
 							mkdir($dir_base);
 						}
 					}
-				}
 
-				$css = explode(".cs", end($folders));
-				if(!empty($css[1])){
-					$attrs = explode("url(", $response);
-					if(empty($attrs)){
-						$attrs = explode("url (", $response);
+					if($media){
+						$upload_url = wp_upload_dir();
+						$file_name = str_replace($upload_url['baseurl'], '', $url);
+					}else{
+						$file_name = str_replace(get_template_directory_uri(), '', $url);
 					}
 
-					if(!empty($attrs)){
-						unset($attrs[0]);
-						foreach ($attrs as $key_att => $attr) {
-							$http = explode("http", $attr);
-							if(!$http[1]){
-								$attr = explode(")", $attr);
-								$attr = str_replace('"', '', $attr[0]);
-								$attr = str_replace("'", "", $attr);
-
-								$attr = $dir_base  . '/' . $attr;
-
-								$attr = str_replace(get_home_path() . 'html/', '', $attr);
-
-								$attr = get_template_directory_uri() . $attr;
-
-								$this->deploy_upload($attr);
-								$this->repeat_files_rlout[] = $attr;
+					$folders = explode("/", $file_name);
+					foreach ($folders as $key => $folder) {
+						if($key+1<count($folders)){
+							$dir_base = $dir_base . '/' . $folder;
+							if( is_dir($dir_base) === false ){
+								mkdir($dir_base);
 							}
 						}
 					}
+
+					$css = explode(".cs", end($folders));
+					if(!empty($css[1])){
+						$attrs = explode("url(", $response);
+						if(empty($attrs)){
+							$attrs = explode("url (", $response);
+						}
+
+						if(!empty($attrs)){
+							unset($attrs[0]);
+							foreach ($attrs as $key_att => $attr) {
+								$http = explode("http", $attr);
+								if(!$http[1]){
+									$attr = explode(")", $attr);
+									$attr = str_replace('"', '', $attr[0]);
+									$attr = str_replace("'", "", $attr);
+
+									$attr = $dir_base  . '/' . $attr;
+
+									$attr = str_replace(get_home_path() . 'html/', '', $attr);
+
+									$attr = get_template_directory_uri() . $attr;
+
+									$this->deploy_upload($attr);
+									$this->repeat_files_rlout[] = $attr;
+								}
+							}
+						}
+					}
+
+					$file = fopen( $dir_base . '/' . end($folders),"w");
+
+					fwrite($file, $response);
+
+					$this->ftp_upload_file($dir_base . '/' . end($folders));
+					$this->s3_upload_file($dir_base . '/' . end($folders));
 				}
-
-				$file = fopen( $dir_base . '/' . end($folders),"w");
-
-				fwrite($file, $response);
-
-				$this->ftp_upload_file($dir_base . '/' . end($folders));
-				$this->s3_upload_file($dir_base . '/' . end($folders));
 			}
 		}
-	}
 
-	public function replace_json($response){
+		public function replace_json($response){
 
-		$jsons = explode(",", get_option("api_1_rlout"));
+			$jsons = explode(",", get_option("api_1_rlout"));
 
-		foreach ($jsons as $key => $json) {
+			foreach ($jsons as $key => $json) {
 
-			$json_name = explode("action=", $json);
-			$json_name = explode("&", $json_name[1]);
-			$json_name = get_home_path() . 'html/' . $json_name[0] . '.json';
+				$json_name = explode("action=", $json);
+				$json_name = explode("&", $json_name[1]);
+				$json_name = get_home_path() . 'html/' . $json_name[0] . '.json';
 
-			$response = str_replace($json, $json_name, $response);
+				$response = str_replace($json, $json_name, $response);
+			}
+
+			return $response;
 		}
 
-		return $response;
-	}
+		public function s3_upload_file($file_dir){
 
-	public function s3_upload_file($file_dir){
+			$access_key = get_option('s3_key_rlout');
+			$secret_key = get_option('s3_secret_rlout');
 
-		$access_key = get_option('s3_key_rlout');
-		$secret_key = get_option('s3_secret_rlout');
+			if(!empty($secret_key)){
 
-		if(!empty($secret_key)){
-
-			session_start();
+				session_start();
 
         	// creates a client object, informing AWS credentials
-			$clientS3 = S3Client::factory(array(
-				'key'    => $access_key,
-				'secret' => $secret_key
-			));
+				$clientS3 = S3Client::factory(array(
+					'key'    => $access_key,
+					'secret' => $secret_key
+				));
 
 
         	// putObject method sends data to the chosen bucket (in our case, teste-marcelo)
-			$response = $clientS3->putObject(array(
-				'Bucket' => get_option('s3_bucket_rlout'),
-				'Key'    => str_replace(get_home_path() . 'html/','', $file_dir),
-				'SourceFile' => $file_dir,
-				'ACL'    => 'public-read'
-			));
+				$response = $clientS3->putObject(array(
+					'Bucket' => get_option('s3_bucket_rlout'),
+					'Key'    => str_replace(get_home_path() . 'html/','', $file_dir),
+					'SourceFile' => $file_dir,
+					'ACL'    => 'public-read'
+				));
 
+			}
 		}
-	}
 
-	public function s3_remove_file($file_dir){
+		public function s3_remove_file($file_dir){
 
-		$access_key = get_option('s3_key_rlout');
-		$secret_key = get_option('s3_secret_rlout');
+			$access_key = get_option('s3_key_rlout');
+			$secret_key = get_option('s3_secret_rlout');
 
-		if(!empty($secret_key)){
+			if(!empty($secret_key)){
 
-			session_start();
+				session_start();
 
         	// creates a client object, informing AWS credentials
-			$clientS3 = S3Client::factory(array(
-				'key'    => $access_key,
-				'secret' => $secret_key
-			));
+				$clientS3 = S3Client::factory(array(
+					'key'    => $access_key,
+					'secret' => $secret_key
+				));
 
-			$response = $clientS3->deleteObject(array(
-				'Bucket' => get_option('s3_bucket_rlout'),
-				'Key' => str_replace(get_home_path() . 'html/','', $file_dir)
-			));
+				$response = $clientS3->deleteObject(array(
+					'Bucket' => get_option('s3_bucket_rlout'),
+					'Key' => str_replace(get_home_path() . 'html/','', $file_dir)
+				));
 
 
-			return $response;
-			
+				return $response;
+
+			}
 		}
-	}
 
-	public function ftp_upload_file($file_dir){
+		public function ftp_upload_file($file_dir){
 
 		 $ftp_server = get_option('ftp_host_rlout');//serverip
 
