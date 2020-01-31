@@ -360,6 +360,7 @@ Class RelOutputHtml {
 					CURLOPT_ENCODING => "",
 					CURLOPT_MAXREDIRS => 10,
 					CURLOPT_TIMEOUT => 120,
+					CURLOPT_FOLLOWLOCATION => true,
 					CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
 					CURLOPT_CUSTOMREQUEST => "GET",
 					CURLOPT_HTTPHEADER => array(),
@@ -419,6 +420,7 @@ Class RelOutputHtml {
 			CURLOPT_ENCODING => "",
 			CURLOPT_MAXREDIRS => 10,
 			CURLOPT_TIMEOUT => 120,
+			CURLOPT_FOLLOWLOCATION => true,
 			CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
 			CURLOPT_CUSTOMREQUEST => "GET",
 			CURLOPT_HTTPHEADER => array(
@@ -537,6 +539,9 @@ Class RelOutputHtml {
 
 		$object->thumbnails = array();
 		$object->thumbnails['thumbnail'] = get_the_post_thumbnail_url($object, 'thumbnail');
+		if(empty($object->thumbnails['thumbnail'])){
+				$object->thumbnails['thumbnail'] = get_template_directory_uri().'/img/default.jpg';
+			}
 		$object->thumbnails['medium'] = get_the_post_thumbnail_url($object, 'medium');
 		$object->thumbnails['large'] = get_the_post_thumbnail_url($object, 'large');
 		$object->thumbnails['full'] = get_the_post_thumbnail_url($object, 'full');
@@ -580,7 +585,7 @@ Class RelOutputHtml {
 				$post = $this->object_post($post);
 
 				$object->posts[$key_p]['post_title'] = $post->post_title;
-				$object->posts[$key_p]['thumbnail'] = $post->thumbnails['medium'];
+				$object->posts[$key_p]['thumbnail'] = $post->thumbnails['thumbnail'];
 				$object->posts[$key_p]['post_json'] = $post->post_json;
 			}
 		}
@@ -610,6 +615,9 @@ Class RelOutputHtml {
 			// $posts_arr[$key]['post_type'] = $post->post_type;
 			$posts_arr[$key]['post_title'] = $post->post_title;
 			$thumbnail = get_the_post_thumbnail_url($post, "thumbnail");
+			if(empty($thumbnail)){
+				$thumbnail = get_template_directory_uri().'/img/default.jpg';
+			}
 			$posts_arr[$key]['thumbnail'] = $thumbnail;
 			$url = str_replace(site_url(),site_url()."/html",get_permalink($post)).'index.json';
 			$posts_arr[$key]['post_json'] = $url;
@@ -768,7 +776,6 @@ Class RelOutputHtml {
 
 	public function deploy_upload($url, $media=null){
 
-
 		if(!in_array($url, $this->repeat_files_rlout)){
 
 			$curl = curl_init();
@@ -791,6 +798,7 @@ Class RelOutputHtml {
 				CURLOPT_ENCODING => "",
 				CURLOPT_MAXREDIRS => 10,
 				CURLOPT_TIMEOUT => 120,
+				CURLOPT_FOLLOWLOCATION => true,
 				CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
 				CURLOPT_CUSTOMREQUEST => "GET",
 				CURLOPT_HTTPHEADER => array(
