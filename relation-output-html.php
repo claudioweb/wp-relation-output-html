@@ -622,7 +622,7 @@ Class RelOutputHtml {
 			$url = str_replace(site_url(),site_url()."/html",get_permalink($post)).'index.json';
 			$posts_arr[$key]['post_json'] = $url;
 			
-			$term = wp_get_post_terms($post->ID, get_option('taxonomies_rlout'));
+			$term = wp_get_post_terms($post->ID, explode(",", get_option('taxonomies_rlout')) );
 			
 			if(!empty($term)){
 				$url = str_replace(site_url(),site_url()."/html",get_term_link($term[0])).'index.json';
