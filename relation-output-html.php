@@ -610,22 +610,26 @@ Class RelOutputHtml {
 
 		$posts_arr = array();
 		$i=0;
+		$rpl = get_option('replace_url_rlout');
+		if(empty($rpl)){
+			$rpl = site_url().'/html';
+		}
 		foreach ($posts as $key => $post) {
 
-			// $posts_arr[$key]['post_type'] = $post->post_type;
+			$posts_arr[$key]['post_type'] = $post->post_type;
 			$posts_arr[$key]['post_title'] = $post->post_title;
 			$thumbnail = get_the_post_thumbnail_url($post, "thumbnail");
 			if(empty($thumbnail)){
 				$thumbnail = get_template_directory_uri().'/img/default.jpg';
 			}
 			$posts_arr[$key]['thumbnail'] = $thumbnail;
-			$url = str_replace(site_url(),site_url()."/html",get_permalink($post)).'index.json';
+			$url = str_replace(site_url(),$rpl,get_permalink($post)).'index.json';
 			$posts_arr[$key]['post_json'] = $url;
 			
-			$term = wp_get_post_terms($post->ID, explode(",", get_option('taxonomies_rlout')) );
+			$term = wp_get_post_terms($post->ID,  explode(",", get_option('taxonomies_rlout')));
 			
 			if(!empty($term)){
-				$url = str_replace(site_url(),site_url()."/html",get_term_link($term[0])).'index.json';
+				$url = str_replace(site_url(),$rpl,get_term_link($term[0])).'index.json';
 
 				$posts_arr[$key]['term_name'] = $term[0]->name;
 				$posts_arr[$key]['term_json'] = $url;
@@ -650,10 +654,10 @@ Class RelOutputHtml {
 
 				$upload_url = wp_upload_dir();						
 
-				$response = str_replace($upload_url['baseurl'], site_url().'/html/uploads', $response);
+				$response = str_replace($upload_url['baseurl'], $rpl.'/uploads', $response);
 				if($uploads_url_rlout){
 					sleep(1);
-					$response = str_replace($uploads_url_rlout, site_url().'/html/uploads', $response);
+					$response = str_replace($uploads_url_rlout, $rpl.'/uploads', $response);
 				}
 
 			}
@@ -682,7 +686,12 @@ Class RelOutputHtml {
 
 		header( "Content-type: application/json");
 
-		$terms = get_terms(explode(",", get_option('taxonomies_rlout')));	
+		$terms = get_terms(explode(",", get_option('taxonomies_rlout')));
+
+		$rpl = get_option('replace_url_rlout');
+		if(empty($rpl)){
+			$rpl = site_url().'/html';
+		}
 
 		foreach ($terms as $key => $term) {
 			$term = $this->object_term($term, false);
@@ -702,12 +711,12 @@ Class RelOutputHtml {
 
 				$upload_url = wp_upload_dir();						
 
-				$response = str_replace($upload_url['baseurl'], site_url().'/html/uploads', $response);
+				$response = str_replace($upload_url['baseurl'], $rpl.'/uploads', $response);
 
 				sleep(1);
 
 				if($uploads_url_rlout){
-					$response = str_replace($uploads_url_rlout, site_url().'/html/uploads', $response);
+					$response = str_replace($uploads_url_rlout, $rpl.'/uploads', $response);
 				}
 			}
 
@@ -750,7 +759,7 @@ Class RelOutputHtml {
 		}
 
 
-			//replace url
+		//replace url
 		$rpl = get_option('replace_url_rlout');
 		if(empty($rpl)){
 			$rpl = site_url();
