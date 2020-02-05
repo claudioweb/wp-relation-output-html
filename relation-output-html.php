@@ -621,6 +621,7 @@ Class RelOutputHtml {
 			$thumbnail = get_the_post_thumbnail_url($post, "thumbnail");
 			if(empty($thumbnail)){
 				$thumbnail = get_template_directory_uri().'/img/default.jpg';
+				$thumbnail = str_replace(get_template_directory_uri(), $rpl, $thumbnail);
 			}
 			$posts_arr[$key]['thumbnail'] = $thumbnail;
 			$url = str_replace(site_url(),$rpl,get_permalink($post)).'index.json';
