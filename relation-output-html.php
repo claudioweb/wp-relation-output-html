@@ -546,8 +546,8 @@ Class RelOutputHtml {
 		$object->thumbnails = array();
 		$object->thumbnails['thumbnail'] = get_the_post_thumbnail_url($object, 'thumbnail');
 		if(empty($object->thumbnails['thumbnail'])){
-				$object->thumbnails['thumbnail'] = get_template_directory_uri().'/img/default.jpg';
-			}
+			$object->thumbnails['thumbnail'] = get_template_directory_uri().'/img/default.jpg';
+		}
 		$object->thumbnails['medium'] = get_the_post_thumbnail_url($object, 'medium');
 		$object->thumbnails['large'] = get_the_post_thumbnail_url($object, 'large');
 		$object->thumbnails['full'] = get_the_post_thumbnail_url($object, 'full');
@@ -692,56 +692,61 @@ Class RelOutputHtml {
 
 		header( "Content-type: application/json");
 
-		$terms = get_terms(explode(",", get_option('taxonomies_rlout')));
+		$taxonomies = explode(",", get_option('taxonomies_rlout'));
 
-		$rpl = get_option('replace_url_rlout');
-		if(empty($rpl)){
-			$rpl = site_url().'/html';
-		}
+		foreach($taxonomies as $tax){
 
-		foreach ($terms as $key => $term) {
-			$term = $this->object_term($term, false);
-		}
+			$terms = get_terms(array("taxonomy"=>$tax, 'hide_empty' => false));
 
-		$response = json_encode($terms , JSON_UNESCAPED_SLASHES);
+			$rpl = get_option('replace_url_rlout');
+			if(empty($rpl)){
+				$rpl = site_url().'/html';
+			}
 
-		if($generate==true){
+			foreach ($terms as $key => $term) {
+				$term = $this->object_term($term, false);
+			}
 
-			sleep(1);
+			$response = json_encode($terms , JSON_UNESCAPED_SLASHES);
 
-			$replace_uploads = get_option('uploads_rlout');
-
-			$uploads_url_rlout = get_option('uploads_url_rlout'); 
-
-			if($replace_uploads){
-
-				$upload_url = wp_upload_dir();						
-
-				$response = str_replace($upload_url['baseurl'], $rpl.'/uploads', $response);
+			if($generate==true){
 
 				sleep(1);
 
-				if($uploads_url_rlout){
-					$response = str_replace($uploads_url_rlout, $rpl.'/uploads', $response);
+				$replace_uploads = get_option('uploads_rlout');
+
+				$uploads_url_rlout = get_option('uploads_url_rlout'); 
+
+				if($replace_uploads){
+
+					$upload_url = wp_upload_dir();						
+
+					$response = str_replace($upload_url['baseurl'], $rpl.'/uploads', $response);
+
+					sleep(1);
+
+					if($uploads_url_rlout){
+						$response = str_replace($uploads_url_rlout, $rpl.'/uploads', $response);
+					}
 				}
+
+				$dir_base =  get_option("path_rlout");
+				if( is_dir($dir_base) === false ){
+					mkdir($dir_base);
+				}
+
+				$file_path = $dir_base . '/'.$tax.'_terms.json';
+
+				$file = fopen($file_path, "w");
+
+				fwrite($file, $response);
+
+				$this->ftp_upload_file($file_path);
+				$this->s3_upload_file($file_path);
+			}else{
+
+				die($response);
 			}
-
-			$dir_base =  get_option("path_rlout");
-			if( is_dir($dir_base) === false ){
-				mkdir($dir_base);
-			}
-
-			$file_path = $dir_base . '/terms.json';
-
-			$file = fopen($file_path, "w");
-
-			fwrite($file, $response);
-
-			$this->ftp_upload_file($file_path);
-			$this->s3_upload_file($file_path);
-		}else{
-
-			die($response);
 		}
 	}
 
