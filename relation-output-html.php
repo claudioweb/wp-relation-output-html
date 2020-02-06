@@ -400,6 +400,12 @@ Class RelOutputHtml {
 
 			$url = get_permalink( $object );
 			$slug = $object->post_name;
+
+			$thumbnails = get_intermediate_image_sizes();
+			foreach ($thumbnails as $key => $t) {
+				$url_thumb = get_the_post_thumbnail_url($object, $t);
+				$this->deploy_upload($url_thumb, '/uploads');
+			}
 		}
 
 		if(!empty($object->term_id)){
