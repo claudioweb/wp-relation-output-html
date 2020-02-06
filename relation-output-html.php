@@ -266,10 +266,10 @@ Class RelOutputHtml {
 			$objects = get_posts(array('post_type'=>$post_types, 'posts_per_page'=>-1));
 
 			$this->deploy($objects);
-
-			$objects = get_terms( array('taxonomy' => $taxonomies, 'hide_empty' => false) );
-
-			$this->deploy($objects);
+			foreach ($taxonomies as $key => $tax) {
+				$objects = get_terms( array('taxonomy' => $tax, 'hide_empty' => false) );
+				$this->deploy($objects);
+			}
 
 		}else{
 
@@ -683,7 +683,6 @@ Class RelOutputHtml {
 	}
 
 	public function api_terms($generate){
-
 
 		header( "Content-type: application/json");
 
