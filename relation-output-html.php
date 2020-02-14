@@ -91,7 +91,7 @@ Class RelOutputHtml {
 
 			if(in_array('administrator', $user->roles)){
 
-				add_action("init", array($this, 'post_auto_deploy'), 1);
+				add_action("init", array($this, 'post_auto_deploy'), 9999);
 			}
 
 			$redirect_param = sanitize_title($this->name_plugin) . '-config';
@@ -110,7 +110,7 @@ Class RelOutputHtml {
 
 			if(in_array('administrator', $user->roles)){
 
-				add_action("init", array($this, 'json_generate'));
+				add_action("init", array($this, 'json_generate'), 9999);
 			}
 
 			$redirect_param = sanitize_title($this->name_plugin) . '-config';
@@ -604,87 +604,93 @@ Class RelOutputHtml {
 	public function api_posts($generate){
 
 		header( "Content-type: application/json");
+		$post_types = explode(",", get_option('post_types_rlout'));
+		foreach ($post_types as $key => $post_type) {
+			$posts = get_posts(
+				array(
+					'post_type'=>$post_type,
+					'posts_per_page' => -1,
+					'order'=>'DESC',
+					'orderby'=>'post_modified'
+				)
+			);
 
-		$posts = get_posts(
-			array(
-				'post_type'=>explode(",", get_option('post_types_rlout')),
-				'posts_per_page' => -1,
-				'order'=>'DESC',
-				'orderby'=>'post_modified'
-			)
-		);
-
-		$posts_arr = array();
-		$i=0;
-		$rpl = get_option('replace_url_rlout');
-		if(empty($rpl)){
-			$rpl = site_url().'/html';
-		}
-		foreach ($posts as $key => $post) {
-
-			$posts_arr[$key]['post_type'] = $post->post_type;
-			$posts_arr[$key]['post_title'] = $post->post_title;
-			$thumbnail = get_the_post_thumbnail_url($post, "thumbnail");
-			if(empty($thumbnail)){
-				$thumbnail = get_template_directory_uri().'/img/default.jpg';
-				$thumbnail = str_replace(get_template_directory_uri(), $rpl, $thumbnail);
+			$posts_arr = array();
+			$i=0;
+			$rpl = get_option('replace_url_rlout');
+			if(empty($rpl)){
+				$rpl = site_url().'/html';
 			}
-			$posts_arr[$key]['thumbnail'] = $thumbnail;
-			$url = str_replace(site_url(),$rpl,get_permalink($post)).'index.json';
-			$posts_arr[$key]['post_json'] = $url;
-			
-			$term = wp_get_post_terms($post->ID,  explode(",", get_option('taxonomies_rlout')));
-			
-			if(!empty($term)){
-				$url = str_replace(site_url(),$rpl,get_term_link($term[0])).'index.json';
+			foreach ($posts as $key => $post) {
 
-				$posts_arr[$key]['term_name'] = $term[0]->name;
-				$posts_arr[$key]['term_json'] = $url;
-			}
-			$i++;
-			if($i==1000){
-				$i=0;
-				sleep(1);
-			}
-		}
+				$posts_arr[$key]['post_title'] = $post->post_title;
+				$thumbnail = get_the_post_thumbnail_url($post, "thumbnail");
+				if(empty($thumbnail)){
+					$thumbnail = get_template_directory_uri().'/img/default.jpg';
+					$thumbnail = str_replace(get_template_directory_uri(), $rpl, $thumbnail);
+				}
+				$posts_arr[$key]['thumbnail'] = $thumbnail;
+				$url = str_replace(site_url(),$rpl,get_permalink($post)).'index.json';
+				$posts_arr[$key]['post_json'] = $url;
 
-		$response = json_encode($posts_arr , JSON_UNESCAPED_SLASHES);
+				$taxonomies = explode(",", get_option('taxonomies_rlout'));
 
-		if($generate==true){
+				if(!empty($taxonomies)){
 
-			sleep(1);
-			$replace_uploads = get_option('uploads_rlout');
+					$term = wp_get_post_terms($post->ID,  $taxonomies);
 
-			$uploads_url_rlout = get_option('uploads_url_rlout'); 
+					if(!empty($term) && empty($term->errors)){
+						$url = str_replace(site_url(),$rpl,get_term_link($term[0])).'index.json';
 
-			if($replace_uploads){
-
-				$upload_url = wp_upload_dir();						
-
-				$response = str_replace($upload_url['baseurl'], $rpl.'/uploads', $response);
-				if($uploads_url_rlout){
+						$posts_arr[$key]['term_name'] = $term[0]->name;
+						$posts_arr[$key]['term_json'] = $url;
+					}
+				}
+				$i++;
+				if($i==1000){
+					$i=0;
 					sleep(1);
-					$response = str_replace($uploads_url_rlout, $rpl.'/uploads', $response);
+				}
+			}
+
+			$response = json_encode($posts_arr , JSON_UNESCAPED_SLASHES);
+
+			if($generate==true){
+
+				sleep(1);
+				$replace_uploads = get_option('uploads_rlout');
+
+				$uploads_url_rlout = get_option('uploads_url_rlout'); 
+
+				if($replace_uploads){
+
+					$upload_url = wp_upload_dir();						
+
+					$response = str_replace($upload_url['baseurl'], $rpl.'/uploads', $response);
+					if($uploads_url_rlout){
+						sleep(1);
+						$response = str_replace($uploads_url_rlout, $rpl.'/uploads', $response);
+					}
+
 				}
 
+				$dir_base =  get_option("path_rlout");
+				if( is_dir($dir_base) === false ){
+					mkdir($dir_base);
+				}
+
+				$file_path = $dir_base . '/'.$post_type.'.json';
+
+				$file = fopen($file_path, "w");
+
+				fwrite($file, $response);
+
+				$this->ftp_upload_file($file_path);
+				$this->s3_upload_file($file_path);
+			}else{
+
+				die($response);
 			}
-
-			$dir_base =  get_option("path_rlout");
-			if( is_dir($dir_base) === false ){
-				mkdir($dir_base);
-			}
-
-			$file_path = $dir_base . '/posts.json';
-
-			$file = fopen($file_path, "w");
-
-			fwrite($file, $response);
-			
-			$this->ftp_upload_file($file_path);
-			$this->s3_upload_file($file_path);
-		}else{
-
-			die($response);
 		}
 	}
 
@@ -735,7 +741,7 @@ Class RelOutputHtml {
 					mkdir($dir_base);
 				}
 
-				$file_path = $dir_base . '/'.$tax.'_terms.json';
+				$file_path = $dir_base . '/'.$tax.'.json';
 
 				$file = fopen($file_path, "w");
 
