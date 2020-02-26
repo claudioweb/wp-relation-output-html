@@ -867,6 +867,7 @@ Class RelOutputHtml {
 					}
 				}else{
 					$file_name = str_replace(get_template_directory_uri(), '', $url);
+					$file_name = str_replace(site_url(), '', $file_name);
 				}
 
 				$folders = explode("/", $file_name);
