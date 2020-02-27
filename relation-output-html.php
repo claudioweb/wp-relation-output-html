@@ -964,12 +964,20 @@ Class RelOutputHtml {
 					'secret' => $secret_key
 				));
         		// putObject method sends data to the chosen bucket (in our case, teste-marcelo)
-				$response = $clientS3->putObject(array(
-					'Bucket' => get_option('s3_bucket_rlout'),
-					'Key'    => str_replace(get_option("path_rlout").'/','', $file_dir),
-					'SourceFile' => $file_dir,
-					'ACL'    => 'public-read'
-				));
+
+        		$file_dir = str_replace("//", "/", $file_dir);
+        		
+        		$key_file_s3 = str_replace(get_option("path_rlout").'/','', $file_dir);
+        		$key_file_s3 = str_replace(get_option("path_rlout"),'', $key_file_s3);
+
+        		if(!empty($key_file_s3)){
+					$response = $clientS3->putObject(array(
+						'Bucket' => get_option('s3_bucket_rlout'),
+						'Key'    => $key_file_s3,
+						'SourceFile' => $file_dir,
+						'ACL'    => 'public-read'
+					));
+				}
 
 			}
 		}
