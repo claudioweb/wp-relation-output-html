@@ -36,6 +36,7 @@ Class RelOutputHtml {
 		}
 
 		// verifica alterações de TERMS
+		add_action( 'create_term', array($this, 'term_create_folder'), 10, 3);
 		add_action( 'edit_term', array($this, 'term_create_folder'), 10, 3);
 		add_action( 'delete_term', array($this, 'term_delete_folder'), 10, 3);
 
