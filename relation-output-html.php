@@ -116,7 +116,7 @@ Class RelOutputHtml {
 
 			$redirect_param = sanitize_title($this->name_plugin) . '-config';
 
-			// header('Location:'.admin_url('admin.php?&loading_deploy=true&page='.$redirect_param));
+			header('Location:'.admin_url('admin.php?&loading_deploy=true&page='.$redirect_param));
 		}
 	}
 
