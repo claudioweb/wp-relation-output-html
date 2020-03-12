@@ -116,7 +116,7 @@ Class RelOutputHtml {
 
 			$redirect_param = sanitize_title($this->name_plugin) . '-config';
 
-			header('Location:'.admin_url('admin.php?&loading_deploy=true&page='.$redirect_param));
+			// header('Location:'.admin_url('admin.php?&loading_deploy=true&page='.$redirect_param));
 		}
 	}
 
@@ -259,8 +259,13 @@ Class RelOutputHtml {
 	public function post_auto_deploy($post_id=null){
 
 		$post_types = explode(',', get_option('post_types_rlout'));
-
-		$taxonomies = explode(',', get_option('taxonomies_rlout'));
+		foreach ($post_types as $key => $pt) {
+			$link = get_post_type_archive_link($pt);
+			if($link){
+				$this->curl_generate(get_post_type_archive_link($pt));
+			}
+		}
+		sleep(1);
 
 		if(empty($post_id)){
 
@@ -407,16 +412,17 @@ Class RelOutputHtml {
 				$url_thumb = get_the_post_thumbnail_url($object, $t);
 				$this->deploy_upload($url_thumb, '/uploads');
 			}
-		}
-
-		if(!empty($object->term_id)){
+		} else if(!empty($object->term_id)){
 			
 			$url = get_term_link( $object );
 			$slug = $object->slug;
-		}
+		}else{
 
-		if($home){
-			$url = site_url('/');
+			if($home){
+				$url = site_url('/');
+			}else{
+				$url = $object;
+			}
 		}
 
 		$curl = curl_init();
@@ -561,7 +567,19 @@ Class RelOutputHtml {
 			}
 		}
 
-		$object->metas =  get_post_meta($object->ID);
+		$metas =  get_post_meta($object->ID);
+
+		$metas_arr = array();
+		foreach ($metas as $key_mm => $meta) {
+			$thumb = wp_get_attachment_thumb_url($meta[0]);
+			if(!empty($thumb)){
+				$metas_arr[$key_mm][0] = $thumb;
+			}else{
+				$metas_arr[$key_mm] = $meta;
+			}
+		}
+
+		$object->metas = $metas_arr;
 
 		return $object;
 
@@ -597,7 +615,18 @@ Class RelOutputHtml {
 			}
 		}
 
-		$object->metas = get_term_meta($object->term_id);
+		$metas = get_term_meta($object->term_id);
+		$metas_arr = array();
+		foreach ($metas as $key_mm => $meta) {
+			$thumb = wp_get_attachment_thumb_url($meta[0]);
+			if(!empty($thumb)){
+				$metas_arr[$key_mm][0] = $thumb;
+			}else{
+				$metas_arr[$key_mm] = $meta;
+			}
+		}
+
+		$object->metas = $metas_arr;
 
 		return $object;
 	}
