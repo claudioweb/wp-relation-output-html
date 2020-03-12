@@ -116,7 +116,7 @@ Class RelOutputHtml {
 
 			$redirect_param = sanitize_title($this->name_plugin) . '-config';
 
-			// header('Location:'.admin_url('admin.php?&loading_deploy=true&page='.$redirect_param));
+			header('Location:'.admin_url('admin.php?&loading_deploy=true&page='.$redirect_param));
 		}
 	}
 
@@ -571,9 +571,12 @@ Class RelOutputHtml {
 
 		$metas_arr = array();
 		foreach ($metas as $key_mm => $meta) {
-			$thumb = wp_get_attachment_thumb_url($meta[0]);
+			$thumb = wp_get_attachment_image_src($meta[0], 'full');
 			if(!empty($thumb)){
-				$metas_arr[$key_mm][0] = $thumb;
+				$sizes = get_intermediate_image_sizes();
+				foreach ($sizes as $key_sz => $size) {
+					$metas_arr[$key_mm][] = wp_get_attachment_image_src($meta[0], $size);
+				}
 			}else{
 				$metas_arr[$key_mm] = $meta;
 			}
@@ -628,8 +631,7 @@ Class RelOutputHtml {
 				$metas_arr[$key_mm] = $meta;
 			}
 		}
-		var_dump($metas_arr);
-		die();
+		
 		$object->metas = $metas_arr;
 
 		return $object;
