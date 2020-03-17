@@ -224,13 +224,16 @@ Class RelOutputHtml {
 				}
 			}
 
-			$dir_base =  str_replace('__trashed', '', get_option("path_rlout") . $post->post_name);
+			if($post->post_name){
 
-			unlink($dir_base . '/index.html');
-			rmdir($dir_base);
+				$dir_base =  str_replace('__trashed', '', get_option("path_rlout") . $post->post_name);
 
-			$this->ftp_remove_file($dir_base . '/index.html');
-			$this->s3_remove_file($dir_base . '/index.html');
+				unlink($dir_base . '/index.html');
+				rmdir($dir_base);
+
+				$this->ftp_remove_file($dir_base . '/index.html');
+				$this->s3_remove_file($dir_base . '/index.html');
+			}
 
 		}
 
@@ -660,6 +663,7 @@ Class RelOutputHtml {
 			}
 			foreach ($posts as $key => $post) {
 
+				$posts_arr[$key]['ID'] = $post->ID;
 				$posts_arr[$key]['post_title'] = $post->post_title;
 				$thumbnail = get_the_post_thumbnail_url($post, "thumbnail");
 				if(empty($thumbnail)){
@@ -1003,12 +1007,12 @@ Class RelOutputHtml {
 				));
         		// putObject method sends data to the chosen bucket (in our case, teste-marcelo)
 
-        		$file_dir = str_replace("//", "/", $file_dir);
-        		
-        		$key_file_s3 = str_replace(get_option("path_rlout").'/','', $file_dir);
-        		$key_file_s3 = str_replace(get_option("path_rlout"),'', $key_file_s3);
+				$file_dir = str_replace("//", "/", $file_dir);
 
-        		if(!empty($key_file_s3)){
+				$key_file_s3 = str_replace(get_option("path_rlout").'/','', $file_dir);
+				$key_file_s3 = str_replace(get_option("path_rlout"),'', $key_file_s3);
+
+				if(!empty($key_file_s3)){
 					$response = $clientS3->putObject(array(
 						'Bucket' => get_option('s3_bucket_rlout'),
 						'Key'    => $key_file_s3,
