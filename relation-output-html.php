@@ -1,4 +1,4 @@
-<?php 
+<?php
 /***************************************************************************
 Plugin Name:  Relation Output HTML
 Plugin URI:   http://www.claudioweb.com.br/
@@ -598,7 +598,7 @@ Class RelOutputHtml {
 		$object = $this->url_json_obj($object);
 
 		$args_posts = array();
-		$args_posts['post_types'] = explode(",", get_option('post_types_rlout'));
+		$args_posts['post_type'] = explode(",", get_option('post_types_rlout'));
 		$args_posts['posts_per_page'] = -1;
 		$args_posts['order'] = 'DESC';
 		$args_posts['orderby'] = 'post_modified';
