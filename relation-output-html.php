@@ -612,6 +612,7 @@ Class RelOutputHtml {
 
 				$post = $this->object_post($post);
 
+				$object->posts[$key_p]['ID'] = $post->ID;
 				$object->posts[$key_p]['post_title'] = $post->post_title;
 				$object->posts[$key_p]['thumbnail'] = $post->thumbnails['thumbnail'];
 				$object->posts[$key_p]['post_json'] = $post->post_json;
@@ -678,6 +679,7 @@ Class RelOutputHtml {
 					if(!empty($term) && empty($term->errors)){
 						$url = str_replace(site_url(),$rpl,get_term_link($term[0])).'index.json';
 
+						$posts_arr[$key]['term_id'] = $term[0]->term_id;
 						$posts_arr[$key]['term_name'] = $term[0]->name;
 						$posts_arr[$key]['term_json'] = $url;
 					}
