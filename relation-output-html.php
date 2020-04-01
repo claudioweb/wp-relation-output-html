@@ -1008,7 +1008,8 @@ Class RelOutputHtml {
         		// putObject method sends data to the chosen bucket (in our case, teste-marcelo)
 
 				$file_dir = str_replace("//", "/", $file_dir);
-
+				$file_dir = str_replace("./", "/", $file_dir);
+				
 				$key_file_s3 = str_replace(get_option("path_rlout").'/','', $file_dir);
 				$key_file_s3 = str_replace(get_option("path_rlout"),'', $key_file_s3);
 
