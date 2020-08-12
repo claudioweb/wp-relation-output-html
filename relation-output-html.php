@@ -141,6 +141,11 @@ Class RelOutputHtml {
 			}
 			update_option('path_rlout', get_home_path() . "html");
 		}
+
+		$uri = get_option("uri_rlout");
+		if(empty($uri)){
+			update_option('uri_rlout', get_template_directory_uri());
+		}
 	}
 
 	public function term_create_folder($term_id, $tt_id, $taxonomy, $deleted_term=null){
@@ -490,7 +495,7 @@ Class RelOutputHtml {
 
 			}
 
-			$response = $this->replace_reponse(get_template_directory_uri(), $response);
+			$response = $this->replace_reponse(get_option("uri_rlout"), $response);
 
 			$jsons = array();
 			
@@ -505,7 +510,7 @@ Class RelOutputHtml {
 				$this->object_post($object);
 			}
 
-			$response_json = $this->replace_reponse(get_template_directory_uri(), json_encode($object));
+			$response_json = $this->replace_reponse(get_option("uri_rlout"), json_encode($object));
 
 			fwrite($file_json,  $response_json);
 
@@ -556,7 +561,7 @@ Class RelOutputHtml {
 		$object->thumbnails = array();
 		$object->thumbnails['thumbnail'] = get_the_post_thumbnail_url($object, 'thumbnail');
 		if(empty($object->thumbnails['thumbnail'])){
-			$object->thumbnails['thumbnail'] = get_template_directory_uri().'/img/default.jpg';
+			$object->thumbnails['thumbnail'] = get_option("uri_rlout").'/img/default.jpg';
 		}
 		$object->thumbnails['medium'] = get_the_post_thumbnail_url($object, 'medium');
 		$object->thumbnails['large'] = get_the_post_thumbnail_url($object, 'large');
@@ -667,8 +672,8 @@ Class RelOutputHtml {
 				$posts_arr[$key]['post_title'] = $post->post_title;
 				$thumbnail = get_the_post_thumbnail_url($post, "thumbnail");
 				if(empty($thumbnail)){
-					$thumbnail = get_template_directory_uri().'/img/default.jpg';
-					$thumbnail = str_replace(get_template_directory_uri(), $rpl, $thumbnail);
+					$thumbnail = get_option("uri_rlout").'/img/default.jpg';
+					$thumbnail = str_replace(get_option("uri_rlout"), $rpl, $thumbnail);
 				}
 				$posts_arr[$key]['thumbnail'] = $thumbnail;
 				$url = str_replace(site_url(),$rpl,get_permalink($post)).'index.json';
@@ -908,7 +913,7 @@ Class RelOutputHtml {
 						$file_name = str_replace($uploads_url_rlout, '', $file_name);
 					}
 				}else{
-					$file_name = str_replace(get_template_directory_uri(), '', $url);
+					$file_name = str_replace(get_option("uri_rlout"), '', $url);
 					$file_name = str_replace(site_url(), '', $file_name);
 				}
 
@@ -942,7 +947,7 @@ Class RelOutputHtml {
 
 								$attr = str_replace(get_option("path_rlout"), '', $attr);
 
-								$attr = get_template_directory_uri() . $attr;
+								$attr = get_option("uri_rlout") . $attr;
 
 								$svg = explode("data:image", $attr);
 
@@ -1210,6 +1215,8 @@ Class RelOutputHtml {
 			$fields['uploads_url_rlout'] = array('type'=>'text', 'label'=>"<small> URL de imagens para transferi-las");
 
 			$fields['path_rlout'] = array('type'=>'text', 'label'=>"Path:<br><small> ".get_home_path() . 'html/</small>');
+			
+			$fields['uri_rlout'] = array('type'=>'text', 'label'=>"Directory_uri():<br><small>Caminho do template</small>");
 
 			$fields['robots_rlout'] = array('type'=>'checkbox', 'label'=>'Evitar mecanismos de pesquisa em: '.site_url());
 
