@@ -826,24 +826,22 @@ Class RelOutputHtml {
 		//replace url
 		$rpl = get_option('replace_url_rlout');
 		if(empty($rpl)){
-			$rpl = site_url();
+			$rpl = site_url().'/html';
 		}
+		$rpl_original = $rpl;
 		$rpl = $rpl . $media;
-		if(!empty($rpl) && $rpl!=site_url() && $rpl!=$url_replace){
-
+		if($rpl!=site_url() && $rpl!=$url_replace){
+			
 			$response = str_replace($url_replace, $rpl, $response);
 			if(!$media){
+
 				$response = str_replace(site_url(), $rpl, $response);
 			}
-		}else{
-
-			$rpl_theme = explode(site_url(), $url_replace);
-			$rpl = site_url('html'.$media);
-
-			$response = str_replace($rpl_theme[1], '', $response);
-			$response = str_replace(site_url(), $rpl, $response);
 		}
-
+		$rpl_dir = str_replace(site_url(), '', $rpl_original);
+		if(!empty($rpl_dir)){
+			$response = str_replace($rpl_dir.$rpl_dir,$rpl_dir, $response);
+		}
 		return $response;
 	}
 
@@ -1200,7 +1198,7 @@ Class RelOutputHtml {
 
 			$fields = array();
 			$fields['replace_url_rlout'] = array('type'=>'text','label'=>'Substituir a URL <br>
-				<small>Default: ('.site_url().')</small>');
+				<small>Default: ('.site_url().'/html)</small>');
 
 			$fields['post_types_rlout'] = array('type'=>'select', 'label'=>'Post Type para deploy', 'multiple'=>'multiple');
 			$fields['post_types_rlout']['options'] = get_post_types();
