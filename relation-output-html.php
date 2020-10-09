@@ -995,6 +995,7 @@ Class RelOutputHtml {
 	public function s3_upload_file($file_dir){
 
 		if($file_dir){
+
 			$access_key = get_option('s3_key_rlout');
 			$secret_key = get_option('s3_secret_rlout');
 			$acl_key = get_option('s3_acl_rlout');
@@ -1017,7 +1018,10 @@ Class RelOutputHtml {
 				$key_file_s3 = str_replace(get_option("path_rlout").'/','', $file_dir);
 				$key_file_s3 = str_replace(get_option("path_rlout"),'', $key_file_s3);
 
-				if(!empty($key_file_s3)){
+				$directory_empty = explode('/', $key_file_s3);
+
+				if(!empty($key_file_s3) && !empty(end($directory_empty)) ){
+
 					$response = $clientS3->putObject(array(
 						'Bucket' => get_option('s3_bucket_rlout'),
 						'Key'    => $key_file_s3,
