@@ -997,6 +997,7 @@ Class RelOutputHtml {
 		if($file_dir){
 			$access_key = get_option('s3_key_rlout');
 			$secret_key = get_option('s3_secret_rlout');
+			$acl_key = get_option('s3_acl_rlout');
 
 			// echo $secret_key;
 			if(!empty($secret_key)){
@@ -1021,7 +1022,7 @@ Class RelOutputHtml {
 						'Bucket' => get_option('s3_bucket_rlout'),
 						'Key'    => $key_file_s3,
 						'SourceFile' => $file_dir,
-						'ACL'    => 'public-read'
+						'ACL'    => 'private'
 					));
 				}
 
@@ -1247,6 +1248,16 @@ Class RelOutputHtml {
 			$fields['s3_region_rlout']['options'][] = 'eu-west-1';
 			$fields['s3_region_rlout']['options'][] = 'eu-west-2';
 			$fields['s3_region_rlout']['options'][] = 'sa-east-1';
+
+
+			$fields['s3_acl_rlout'] = array('type'=>'select', 'label'=>'S3 ACL');
+			$fields['s3_acl_rlout']['options'][] = 'private';
+			$fields['s3_acl_rlout']['options'][] = 'public-read';
+			$fields['s3_acl_rlout']['options'][] = 'public-read-write';
+			$fields['s3_acl_rlout']['options'][] = 'authenticated-read';
+			$fields['s3_acl_rlout']['options'][] = 'aws-exec-read';
+			$fields['s3_acl_rlout']['options'][] = 'bucket-owner-read';
+			$fields['s3_acl_rlout']['options'][] = 'bucket-owner-full-control';
 
 			$fields['s3_bucket_rlout'] = array('type'=>'text', 'label'=>'S3 Bucket');
 
