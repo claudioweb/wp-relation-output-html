@@ -1022,7 +1022,7 @@ Class RelOutputHtml {
 						'Bucket' => get_option('s3_bucket_rlout'),
 						'Key'    => $key_file_s3,
 						'SourceFile' => $file_dir,
-						'ACL'    => 'private'
+						'ACL'    => $acl_key
 					));
 				}
 
