@@ -489,7 +489,7 @@ Class RelOutputHtml {
 			return $url.' - URL COM ERRO DE SINTAX';
 		}
 
-		$this->save_log($url);
+		// $this->save_log($url);
 
 		$curl = curl_init();
 		
@@ -557,7 +557,7 @@ Class RelOutputHtml {
 			$jsons = array();
 
 			$ignore_files_rlout = explode(',', get_option("ignore_files_rlout"));
-			if(array_search($url, $ignore_files_rlout)!='NULL'){
+			if(empty(array_search($url, $ignore_files_rlout))){
 			
 				fwrite($file, $response);
 			
@@ -575,7 +575,7 @@ Class RelOutputHtml {
 			
 
 			$ignore_json_rlout = explode(',' ,get_option("ignore_json_rlout"));
-			if(array_search($url, $ignore_json_rlout)!='NULL'){
+			if(empty(array_search($url, $ignore_json_rlout))){
 
 				fwrite($file_json,  $response_json);
 			
@@ -613,7 +613,7 @@ Class RelOutputHtml {
 		
 		$url = get_permalink($object);
 		$ignore_json_rlout = explode(',' ,get_option("ignore_json_rlout"));
-		if(array_search($url, $ignore_json_rlout)!='NULL'){
+		if(empty(array_search($url, $ignore_json_rlout))){
 			unset($object->post_author);
 			unset($object->comment_status);
 			unset($object->ping_status);
@@ -675,7 +675,7 @@ Class RelOutputHtml {
 		
 		$url = get_term_link($object);
 		$ignore_json_rlout = explode(',' ,get_option("ignore_json_rlout"));
-		if(array_search($url, $ignore_json_rlout)!='NULL'){
+		if(empty(array_search($url, $ignore_json_rlout))){
 
 			unset($object->term_group);
 			unset($object->term_taxonomy_id);
@@ -750,7 +750,7 @@ Class RelOutputHtml {
 		foreach ($posts as $key => $post) {
 				
 			$url = get_permalink($post);
-			if(array_search($url, $ignore_json_rlout)!='NULL'){
+			if(empty(array_search($url, $ignore_json_rlout))){
 				$not_in[] = $post->ID;
 				$posts_arr[$key]['ID'] = $post->ID;
 				$posts_arr[$key]['post_title'] = $post->post_title;
@@ -964,7 +964,7 @@ Class RelOutputHtml {
 		
 		public function deploy_upload($url, $media=null){
 			
-			if(array_search($url, $this->repeat_files_rlout)!='NULL'){
+			if(empty(array_search($url, $this->repeat_files_rlout))){
 				
 				$curl = curl_init();
 				
