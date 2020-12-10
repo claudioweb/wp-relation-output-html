@@ -195,6 +195,8 @@ Class RelOutputHtml {
 			
 			$this->deploy($objects);
 		}
+		$this->api_posts(true);
+		$this->api_terms(true);
 	}
 	
 	public function term_delete_folder($term_id, $tt_id, $taxonomy, $deleted_term=null){
@@ -230,6 +232,8 @@ Class RelOutputHtml {
 				$this->deploy($objects);
 			}
 		}
+		$this->api_posts(true);
+		$this->api_terms(true);
 	}
 	
 	public function post_delete_folder($post_id){
@@ -264,7 +268,9 @@ Class RelOutputHtml {
 			}
 			
 		}
-		
+
+		$this->api_posts(true);
+		$this->api_terms(true);
 	}
 	
 	//create your function, that runs on cron
@@ -332,6 +338,9 @@ Class RelOutputHtml {
 		sleep(0.5);
 		
 		$this->git_upload_file('Atualização de object');
+
+		$this->api_posts(true);
+		$this->api_terms(true);
 	}
 	
 	public function deploy($objs=null){

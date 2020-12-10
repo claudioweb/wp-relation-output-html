@@ -182,6 +182,7 @@
 		function get_urls(){
 
 			jQuery('.total_page').html('0');
+			jQuery('.statics_page').html('0');
 
 			var settings_json = {
 				"url": "<?php echo site_url(); ?>/wp-admin/admin-ajax.php?action=static_output_deploy_json",
