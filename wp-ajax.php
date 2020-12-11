@@ -54,7 +54,7 @@ Class WpAjaxRelOutHtml {
         // Taxonomy
         if($taxonomy=='all'){
             $taxonomy = explode(",", get_option('taxonomies_rlout'));
-        }else{
+        }else if(!empty($taxonomy)){
             $taxonomy = array($taxonomy);
         }
         foreach($taxonomy as $tax){
@@ -71,7 +71,7 @@ Class WpAjaxRelOutHtml {
         $args_posts = array();
         if($post_type=='all'){
             $post_type = explode(",", get_option('post_types_rlout'));
-        }else{
+        }else if(!empty($post_type)){
             $post_type = array($post_type);
         }
         foreach($post_type as $pt){

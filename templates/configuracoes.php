@@ -126,6 +126,7 @@
 							<div class="form-group" style="margin-bottom: 16px;">
 								<label for="">Post type</label>
 								<select id="post_type_static" class="form-control">
+									<option value="" selected>Nenhum</option>
 									<option value="all">Todos</option>
 									<?php foreach(get_post_types() as $pt): ?>
 										<option value="<?php echo $pt; ?>"><?php echo $pt; ?></option>
@@ -136,7 +137,8 @@
 							<div class="form-group" style="margin-bottom: 16px;">
 								<label for="">Taxonomy</label>
 								<select id="taxonomy_static" class="form-control">
-									<option value="all" selected>Todos</option>
+									<option value="" selected>Nenhum</option>
+									<option value="all" >Todos</option>
 									<?php foreach(get_taxonomies() as $tax): ?>
 										<option value="<?php echo $tax; ?>"><?php echo $tax; ?></option>
 									<?php endforeach ?>
