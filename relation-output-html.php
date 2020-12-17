@@ -517,6 +517,9 @@ Class RelOutputHtml {
 		));
 		
 		$response = curl_exec($curl);
+
+		$original_response = $response;
+
 		$err = curl_error($curl);
 		
 		curl_close($curl);
@@ -530,21 +533,42 @@ Class RelOutputHtml {
 			if( is_dir($dir_base) === false ){
 				mkdir($dir_base);
 			}
-			
+
 			$replace_path = str_replace(site_url(), '', $url);
 			$dir_base = $dir_base . $replace_path; 
-			$explode_path = explode("/", $dir_base);
+
+			$verify_files_point = explode('.',$dir_base);
+			$file_default = '/index.html';
+			$json_default = '/index.json';
+
+			if(!empty($verify_files_point)){
+				$file_default = '';
+				$json_default = '';
+				if($verify_files_point[1]=='xml'){
+					$xml = simplexml_load_string($original_response);
+					foreach($xml->sitemap as $sitemap){
+						if(isset($sitemap->loc)){
+							$url_map = (array) $sitemap->loc;
+							if(!empty($url_map)){
+								$this->curl_generate($url_map[0]);
+							}
+						}
+					}
+				}
+			}else{
 			
-			foreach ($explode_path as $keyp => $path) {
-				$wp_path = $wp_path . $path . '/';
-				if( is_dir($wp_path) === false ){
-					mkdir($wp_path);
+				$explode_path = explode("/", $dir_base);
+				foreach ($explode_path as $keyp => $path) {
+					$wp_path = $wp_path . $path . '/';
+					if( is_dir($wp_path) === false ){
+						mkdir($wp_path);
+					}
 				}
 			}
 			
-			$file = fopen( $dir_base . '/index.html',"w");
+			$file = fopen( $dir_base . $file_default,"w");
 			
-			$file_json = fopen( $dir_base . '/index.json',"w");
+			$file_json = fopen( $dir_base . $json_default,"w");
 			
 			$replace_uploads = get_option('uploads_rlout');
 			
@@ -554,7 +578,7 @@ Class RelOutputHtml {
 				$upload_url = wp_upload_dir();
 				
 				$response = $this->replace_reponse($upload_url['baseurl'], $response, '/uploads');
-				
+
 				if($uploads_url_rlout){
 					$response = $this->replace_reponse($uploads_url_rlout, $response, '/uploads');
 				}
@@ -570,8 +594,8 @@ Class RelOutputHtml {
 			
 				fwrite($file, $response);
 			
-				$this->ftp_upload_file($dir_base . '/index.html');
-				$this->s3_upload_file($dir_base . '/index.html');
+				$this->ftp_upload_file($dir_base . $file_default);
+				$this->s3_upload_file($dir_base . $file_default);
 			}
 
 			if(term_exists($object->term_id)){
@@ -580,18 +604,20 @@ Class RelOutputHtml {
 				$this->object_post($object);
 			}
 			
-			$response_json = $this->replace_reponse(get_option("uri_rlout"), json_encode($object));
-			
+			if($json_default!=''){
+				$response_json = $this->replace_reponse(get_option("uri_rlout"), json_encode($object));
+				
 
-			$ignore_json_rlout = explode(',' ,get_option("ignore_json_rlout"));
-			if(empty(array_search($url, $ignore_json_rlout))){
+				$ignore_json_rlout = explode(',' ,get_option("ignore_json_rlout"));
+				if(empty(array_search($url, $ignore_json_rlout))){
 
-				fwrite($file_json,  $response_json);
-			
-			
-				$this->ftp_upload_file($dir_base . '/index.json');
-			
-				$this->s3_upload_file($dir_base . '/index.json');
+					fwrite($file_json,  $response_json);
+				
+				
+					$this->ftp_upload_file($dir_base . $json_default);
+				
+					$this->s3_upload_file($dir_base . $json_default);
+				}
 			}
 			
 			return $url;
