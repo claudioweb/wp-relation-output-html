@@ -535,13 +535,14 @@ Class RelOutputHtml {
 			}
 
 			$replace_path = str_replace(site_url(), '', $url);
-			$dir_base = $dir_base . $replace_path; 
+			$dir_base = $dir_base . $replace_path;
 
 			$verify_files_point = explode('.',$dir_base);
+
 			$file_default = '/index.html';
 			$json_default = '/index.json';
 
-			if(!empty($verify_files_point)){
+			if(count($verify_files_point)>1){
 				$file_default = '';
 				$json_default = '';
 				if($verify_files_point[1]=='xml'){
@@ -565,7 +566,6 @@ Class RelOutputHtml {
 					}
 				}
 			}
-			
 			$file = fopen( $dir_base . $file_default,"w");
 			
 			$file_json = fopen( $dir_base . $json_default,"w");
