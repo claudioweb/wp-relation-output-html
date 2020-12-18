@@ -456,6 +456,7 @@ Class RelOutputHtml {
 	}
 	
 	public function curl_generate($object, $home=null){
+
 		$text_post = get_post(url_to_postid($object));
 		if(!empty($text_post)){
 			$object = $text_post;
@@ -471,6 +472,7 @@ Class RelOutputHtml {
 				}
 			}
 		}
+
 		if(!empty($object->ID)){
 			
 			$url = get_permalink( $object );
@@ -546,7 +548,12 @@ Class RelOutputHtml {
 				$file_default = '';
 				$json_default = '';
 				if($verify_files_point[1]=='xml'){
-					$xml = simplexml_load_string($original_response);
+
+					$htt = str_replace('https:', '', site_url());
+					$htt = str_replace('http:', '', $htt);
+					$original_response = str_replace(site_url(), get_option("replace_url_rlout"), $original_response);
+					$original_response = str_replace('href="'.$htt, 'href="'.get_option("replace_url_rlout"), $original_response);
+					$xml = simplexml_load_string($response);
 					foreach($xml->sitemap as $sitemap){
 						if(isset($sitemap->loc)){
 							$url_map = (array) $sitemap->loc;
@@ -555,17 +562,18 @@ Class RelOutputHtml {
 							}
 						}
 					}
-				}
-			}else{
-			
-				$explode_path = explode("/", $dir_base);
-				foreach ($explode_path as $keyp => $path) {
-					$wp_path = $wp_path . $path . '/';
-					if( is_dir($wp_path) === false ){
-						mkdir($wp_path);
-					}
+					$response=$original_response;
 				}
 			}
+			
+			$explode_path = explode("/", $dir_base);
+			foreach ($explode_path as $keyp => $path) {
+				$wp_path = $wp_path . $path . '/';
+				if( is_dir($wp_path) === false && $keyp+1<count($explode_path)){
+					mkdir($wp_path);
+				}
+			}
+
 			$file = fopen( $dir_base . $file_default,"w");
 			
 			$file_json = fopen( $dir_base . $json_default,"w");
@@ -737,7 +745,7 @@ Class RelOutputHtml {
 					$object->posts[$key_p]['ID'] = $post->ID;
 					$object->posts[$key_p]['post_title'] = $post->post_title;
 					$object->posts[$key_p]['post_date'] = $post->post_date;
-					$object->posts[$key_p]['post_excerpt'] = strip_tags(get_the_excerpt($post));
+					$object->posts[$key_p]['post_excerpt'] = strip_tags(get_the_excerpt($post),'<a>');
 					$object->posts[$key_p]['thumbnail'] = $post->thumbnails[$size_thumb];
 					$object->posts[$key_p]['post_json'] = $post->post_json;
 					$object->posts[$key_p] = apply_filters('rel_output_custom_post', $post, $object->posts[$key_p]);
@@ -790,7 +798,7 @@ Class RelOutputHtml {
 				$posts_arr[$key]['ID'] = $post->ID;
 				$posts_arr[$key]['post_title'] = $post->post_title;
 				$posts_arr[$key]['post_date'] = $post->post_date;
-				$posts_arr[$key]['post_excerpt'] = strip_tags(get_the_excerpt($post));
+				$posts_arr[$key]['post_excerpt'] = strip_tags(get_the_excerpt($post),'<a>');
 				$posts_arr[$key] = apply_filters('rel_output_custom_post', $post, $posts_arr[$key]);
 				$size_thumb = get_option('size_thumbnail_rlout');
 				
