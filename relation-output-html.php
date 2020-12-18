@@ -536,7 +536,10 @@ Class RelOutputHtml {
 				mkdir($dir_base);
 			}
 
-			$replace_path = str_replace(site_url(), '', $url);
+			$uri = get_option("uri_rlout");
+
+			$replace_path = str_replace($uri, '', $url);
+			$replace_path = str_replace(site_url(), '', $replace_path);
 			$dir_base = $dir_base . $replace_path;
 
 			$verify_files_point = explode('.',$dir_base);
