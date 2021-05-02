@@ -6,7 +6,6 @@ use Aws\S3\S3Client;
 Class WpAjaxRelOutHtml {
     
     public function __construct() {
-        
         // deploy
         add_action('wp_ajax_static_output_deploy', array($this, 'deploy') );
         
