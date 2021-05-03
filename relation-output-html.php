@@ -9,8 +9,7 @@ Author URI:   http://www.claudioweb.com.br/
 Text Domain:  relation-output-html
 **************************************************************************/
 
-require 'vendor/autoload.php';
+require __DIR__.'/vendor/autoload.php';
 
 $request = new WpRloutHtml\App();
-
 ?>
