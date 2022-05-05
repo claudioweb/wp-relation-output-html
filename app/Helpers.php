@@ -31,46 +31,21 @@ Class Helpers {
 		}
 	}
 
-	static function subfiles_generate(){
+	static function subfiles_generate($format=null){
 		
 		$files = explode(',', self::getOption('subfiles_rlout'));
 		
 		foreach ($files as $key => $file) {
 			
 			if(!empty($file)){
-				Curl::deploy_upload($file);
-				App::$repeat_files_rlout[] = $file;
+				$format_url = explode(".", $file);
+				if(empty($format) || (!empty($format_url) && end($format_url)==$format)){
+					Curl::deploy_upload($file);
+					App::$repeat_files_rlout[] = $file;
+				}
 			}
 		}
 		return $files;
-	}
-
-    static function blog_public(){
-		
-		$robots = self::getOption('robots_rlout');
-		
-		if($robots){
-			
-			update_option('blog_public', '0');
-		}else{
-			
-			update_option('blog_public', '1');
-		}
-		
-		include_once(ABSPATH . '/wp-admin/includes/file.php');
-		include_once(ABSPATH . '/wp-includes/pluggable.php');
-		
-		$raiz = get_home_path().'html';
-		update_option('path_rlout', $raiz);
-		
-		if(defined('PATH_RLOUT')==true){
-			update_option('path_rlout', PATH_RLOUT);
-		}
-		
-		$uri = self::getOption('uri_rlout');
-		if(empty($uri)){
-			update_option('uri_rlout', get_template_directory_uri());
-		}
 	}
 
     static function gen_html_cron_function() {
@@ -158,6 +133,8 @@ Class Helpers {
         if($rpl!=site_url() && $rpl!=$url_replace){
             $response = str_replace($url_replace, $rpl, $response);
             if(!$media){
+
+				
                 $response = str_replace(site_url(), $rpl, $response);
 
 				$site_url_concat = str_replace("https://","",site_url());
@@ -171,6 +148,17 @@ Class Helpers {
 				$rpl_url_concat = $rpl_url_concat[0];
 
                 $response = str_replace($site_url_concat, $rpl_url_concat, $response);
+
+				// url simples ajax
+				$url_ajax = $rpl_url_concat.'/wp-admin/admin-ajax.php';
+				$url_ajax_original = $site_url_concat.'/wp-admin/admin-ajax.php';
+                $response = str_replace($url_ajax, $url_ajax_original, $response);
+
+				// url concatenada ajax
+				$url_ajax = $rpl_url_concat.'\/wp-admin\/admin-ajax.php';
+				$url_ajax_original = $site_url_concat.'\/wp-admin\/admin-ajax.php';
+                $response = str_replace($url_ajax, $url_ajax_original, $response);
+
             }
         }
         $rpl_dir = str_replace(site_url(), '', $rpl_original);

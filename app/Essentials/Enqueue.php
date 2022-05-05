@@ -76,6 +76,11 @@ Class Enqueue {
     }
     
     public function config_admin_var(){
+        $rpl = Helpers::getOption('replace_url_rlout');
+		if(empty($rpl)){
+			$rpl = site_url().'/html';
+		}
+        echo '<input type="hidden" name="static_url_rlout" value="'.$rpl.'/" />';
         echo '<style>#loading_rlout h2{text-align:center;} #loading_rlout{display:none;position:fixed;left:0;top:0;width:100%;height:100%;z-index: 99999;background:rgba(255,255,255,0.9);} #loading_rlout .loader_rlout{position: relative;margin: 60px auto;display: block;top: 33%;border:16px solid #f3f3f3;border-radius:50%;border-top:16px solid #3498db;width:120px;height:120px;-webkit-animation:spin 2s linear infinite;animation:spin 2s linear infinite}@-webkit-keyframes spin{0%{-webkit-transform:rotate(0)}100%{-webkit-transform:rotate(360deg)}}@keyframes spin{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}</style>';
         echo '<div id="loading_rlout"><div class="loader_rlout"></div><h2>Por favor aguarde um instante, estamos processando o HTML.</h2></div>';
         echo '<script>jQuery(function(){ jQuery("#wp-admin-bar-relation-output-html-rlout li a").click(function(){jQuery("#loading_rlout").fadeIn();}); });</script>';

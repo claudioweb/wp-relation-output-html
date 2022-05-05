@@ -5,6 +5,8 @@ namespace WpRloutHtml\Essentials;
 use WpRloutHtml\App;
 
 use WpRloutHtml\Modules\Cloudfront;
+use WpRloutHtml\Modules\Logs;
+use WpRloutHtml\Modules\Auxiliar;
 use WpRloutHtml\Helpers;
 use WpRloutHtml\Posts;
 use WpRloutHtml\Terms;
@@ -12,15 +14,15 @@ use WpRloutHtml\Terms;
 Class Menu {
 
     public function __construct(){
+
+        $this->logs = new Logs;
+        $this->aux = new Auxiliar;
         
         // Inserindo as opções no menu do wp-admin
         add_action( 'admin_menu', array( $this, 'add_admin_menu' ));
 
         // Inserindo as opções de atalho no header toolbar do wp-admin
         add_action('admin_bar_menu', array($this, 'add_toolbar_items'), 100);
-
-        // Verificação do evitar mecanismo de pesquisa
-		add_action('init', array($this, 'blog_public') );
 
         // Retirando o ver mais ou read more do excerpt padrão
 		add_filter('excerpt_more', array($this, 'custom_excerpt_more') );
@@ -45,9 +47,20 @@ Class Menu {
 			$response_essenciais = Helpers::subfiles_generate();
 			
 			if($response_essenciais){
-				echo '<script>alert("Arquivos Essenciais Atualizados!");</script>';
+				echo '<script>alert("Arquivos ignorados atualizados!");</script>';
 			}
 		}
+
+        // Incia a limpeza de cache
+		if(isset($_GET['cache_rlout'])){
+			
+			$response_cache = Cdn::clear_cdn();
+			
+			if($response_cache){
+				echo '<script>alert("Go-Cache limpado com sucesso!");</script>';
+			}
+		}
+
 
         if(!empty($_POST['salvar_rlout'])){
 			
@@ -78,34 +91,6 @@ Class Menu {
 		return '';
 	}
 
-    public function blog_public(){
-		
-		$robots = Helpers::getOption('robots_rlout');
-		
-		if($robots){
-			
-			update_option('blog_public', '0');
-		}else{
-			
-			update_option('blog_public', '1');
-		}
-		
-		include_once(ABSPATH . '/wp-admin/includes/file.php');
-		include_once(ABSPATH . '/wp-includes/pluggable.php');
-		
-		$raiz = get_home_path().'html';
-		update_option('path_rlout', $raiz);
-		
-		if(defined('PATH_RLOUT')==true){
-			update_option('path_rlout', PATH_RLOUT);
-		}
-		
-		$uri = Helpers::getOption('uri_rlout');
-		if(empty($uri)){
-			update_option('uri_rlout', get_template_directory_uri());
-		}
-	}
-    
     public function add_toolbar_items($admin_bar){
         
         $admin_bar->add_menu(array(
@@ -132,10 +117,12 @@ Class Menu {
         if(count($get_param)>1){
             $cloudfront_link = $actual_link.'&cloudfront_rlout=true';
             $essenciais_link = $actual_link.'&essenciais_rlout=true';
+            $cache_link = $actual_link.'&cache_rlout=true';
             $importants_link = $actual_link.'&importants_rlout=true';
         }else{
             $cloudfront_link = $actual_link.'?cloudfront_rlout=true';
             $essenciais_link = $actual_link.'?essenciais_rlout=true';
+            $cache_link = $actual_link.'?cache_rlout=true';
             $importants_link = $actual_link.'?importants_rlout=true';
         }
         
@@ -149,6 +136,16 @@ Class Menu {
                 'title' => 'Limpar Cloudfront',
                 'parent' => 'relation-output-html-rlout',
                 'href'  => $cloudfront_link
+            ));
+        }
+
+        $GocacheToken = Helpers::getOption('cred_cdn_rlout');
+        if(!empty($GocacheToken)){
+            $admin_bar->add_menu( array(
+                'id'    => 'cache-html-rlout',
+                'title' => 'Limpar Go-Cache',
+                'parent' => 'relation-output-html-rlout',
+                'href'  => $cache_link
             ));
         }
         
@@ -165,6 +162,7 @@ Class Menu {
             'parent' => 'relation-output-html-rlout',
             'href'  => $essenciais_link
         ));
+
     }
     
     public function add_admin_menu(){
@@ -228,7 +226,8 @@ Class Menu {
         $fields['taxonomies_rlout'] = array('type'=>'select2', 'label'=>'Taxonomy para deploy', 'multiple'=>'multiple');
         $fields['taxonomies_rlout']['options'] = get_taxonomies();
 
-        $fields['range_posts_rlout'] = array('type'=>'number', 'label'=>'<small> Range de estatização</small>');
+        $fields['range_posts_rlout'] = array('type'=>'number', 'label'=>'<small> Range de estatização</small>', 'default'=>50);
+        $fields['range_posts_get_rlout'] = array('type'=>'number', 'label'=>'<small> Quantidade de requisições por vez</small>','default'=>1);
 
         $fields['parent_term_rlout'] = array('type'=>'checkbox', 'label'=>'Verificar se os terms possui um parent');
         
@@ -238,11 +237,9 @@ Class Menu {
             $fields['size_thumbnail_rlout']['options'][] = $size;
         }
         
-        $fields['path_rlout'] = array('type'=>'text','disabled'=>'disabled','label'=>"Path:<br><small>define('PATH_RLOUT','".get_home_path() . "html');</small>");
+        $fields['path_rlout'] = array('type'=>'text','label'=>"Path HTML: <br><small>".get_home_path() . "html</small>",'default'=>get_home_path() . 'html');
         
         $fields['uri_rlout'] = array('type'=>'text', 'label'=>"Directory_uri():<br><small>Caminho do template</small>");
-        
-        $fields['robots_rlout'] = array('type'=>'checkbox', 'label'=>'Evitar mecanismos de pesquisa em: '.site_url());
         
         $fields['ignore_json_rlout'] = array( 'multiple'=>'multiple','type'=>'select2','action_ajax'=>'all_search_posts','label'=>'Ignorar páginas no JSON<br>
         <small>insira a URL de todos os arquivos que devem ser ignorados no JSON. </small>');
@@ -264,10 +261,13 @@ Class Menu {
         $fields['s3_rlout'] = array('type'=>'label','label'=>'Storage AWS S3');
         
         $fields['s3_distributionid_rlout'] = array('type'=>'text','label'=>'Distribution ID (Cloudfront)');
+        $fields['s3_cloudfront_auto_rlout'] = array('type'=>'checkbox', 'label'=>'Desativar limpeza automática (Cloudfront)');
         
         $fields['s3_key_rlout'] = array('type'=>'text', 'label'=>'S3 Key');
         
         $fields['s3_secret_rlout'] = array('type'=>'text', 'label'=>'S3 Secret');
+        
+        $fields['s3_cachecontrol_rlout'] = array('type'=>'number', 'label'=>'S3 Cache Control');
         
         $fields['s3_region_rlout'] = array('type'=>'select', 'label'=>'S3 Region');
         $fields['s3_region_rlout']['options'][] = 'us-east-1';
@@ -299,6 +299,10 @@ Class Menu {
         $fields['pwd_rlout'] = array('type'=>'label','label'=>'PWD ACESSO');
         $fields['userpwd_rlout'] = array('type'=>'text','label'=>'USUÁRIO PWD');
         $fields['passpwd_rlout'] = array('type'=>'text','label'=>'SENHA PWD');
+
+        $fields['cdn_rlout'] = array('type'=>'label','label'=>'CDN Gocache');
+        $fields['cred_cdn_rlout'] = array('type'=>'text','label'=>'Token');
+        $fields['domain_cdn_rlout'] = array('type'=>'text','label'=>'Dóminio cadastrado');
         
         $this->name_plugin = App::$name_plugin;
         include WP_PLUGIN_DIR . "/wp-relation-output-html/resources/configuracoes.php";

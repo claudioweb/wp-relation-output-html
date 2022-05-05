@@ -7,15 +7,22 @@ use WpRloutHtml\Helpers;
 use WpRloutHtml\Terms;
 use WpRloutHtml\Posts;
 use WpRloutHtml\Modules\S3;
+use WpRloutHtml\Modules\Logs;
+use WpRloutHtml\Modules\Auxiliar;
 
 Class WpAjax {
     
     public function __construct() {
 
+        $this->logs = new Logs;
+        $this->aux = new Auxiliar;
+
         // Ajax de arquivos e páginas: /wp-admin/admin-ajax.php?action=static_output_reset
-        add_action('wp_ajax_static_output_reset', array($this, 'delete_all') );
+        // add_action('wp_ajax_static_output_reset', array($this, 'delete_all') );
         // Ajax de arquivos e páginas: /wp-admin/admin-ajax.php?action=static_output_upload
+        add_action('wp_ajax_static_output_upload_specific', array($this, 'upload_specific') );
         add_action('wp_ajax_static_output_upload', array($this, 'upload_all') );
+        add_action('wp_ajax_static_output_truncate_log', array($this, 'truncate_log') );
 
         // Ajax de arquivos e páginas: /wp-admin/admin-ajax.php?action=static_output_deploy&file_url=
         add_action('wp_ajax_static_output_deploy', array($this, 'deploy') );
@@ -31,54 +38,75 @@ Class WpAjax {
         add_action('wp_ajax_all_search_posts', array($this, 'all_search_posts') );
     }
     
-    public function delete_all(){
+    // public function delete_all(){
 
-        $base_html = Helpers::getOption('path_rlout');
+    //     $base_html = Helpers::getOption('path_rlout');
 
-        $delete_static = Helpers::rrmdir($base_html.'/');
+    //     $delete_static = Helpers::rrmdir($base_html.'/');
         
-        if($delete_static==true){
-            wp_die('Tudo pronto, estamos iniciando a estatização!');
+    //     if($delete_static==true){
+    //         wp_die('Tudo pronto, estamos iniciando a estatização!');
+    //     }
+    // }
+    public function truncate_log(){
+        $this->logs->truncate();
+    }
+
+    public function upload_specific(){
+
+        $verify_files = explode(",", $_POST['files']);
+
+        foreach($verify_files as $obj_key => $object){
+            if(is_dir($object)){
+                $object = $object.'/';
+            }
+            $response = S3::upload_file($object, true);
+            $object = str_replace(Helpers::getOption('path_rlout'),Helpers::getOption('replace_url_rlout'),$object);
+
+            if($response==false){
+                
+                echo '<p><a href="'.$object.'" target="_blank">'.$object.'</a> - FAIL</p>';
+
+                $data = array(
+                    'date_time'=>date('Y-m-d H:i:s'),
+                    'file_static' => $object,
+                    'error_log' => $response
+                );
+                $this->logs->insert($data);
+            }else{
+                echo '<p><a href="'.$object.'" target="_blank">'.$object.'</a> - OK</p>';
+            }
         }
+
+        wp_die();
     }
 
     public function upload_all(){
 
-        $base_html = Helpers::getOption('path_rlout').'/';
-
-        $verify_files = scandir($base_html);
-        unset($verify_files[0]);
-        unset($verify_files[1]);
+        $verify_files = $this->aux->list();
         
-        $per_page = 100;
-        $offset = $_GET['offset'];
         foreach($verify_files as $obj_key => $object){
 
-            $dir = $base_html.$object;
-
-            if(is_dir($dir)){
-
-                $dir = $base_html.$object.'/';
-
-                if($obj_key>=$offset){
-                    if($obj_key<=$per_page+$offset){
-                        $response = S3::upload_file($dir, true);
-                        
-                    }else{
-                        wp_die('- Upload de '.$_GET['offset'].' até '.($per_page+$_GET['offset']).' arquivos/categorias e páginas realizado com sucesso!');
-                    }
-                }
-
-            }else{
-
-                $dir = $base_html.$object;
-
-                $response = S3::upload_file($dir, true);
+            if(Helpers::getOption('path_rlout').'/'==$object->path_static){
+                $object->path_static = $object->path_static.'index.html';
+            }else if(Helpers::getOption('path_rlout')==$object->path_static){
+                $object->path_static = $object->path_static.'/index.html';
             }
+            
+            $response = S3::upload_file($object->path_static, true);
+            if($response==false){
+                $data = array(
+                    'date_time'=>date('Y-m-d H:i:s'),
+                    'file_static' => $object->path_static,
+                    'error_log' => $response
+                );
+                $this->logs->insert($data);
+            }
+            
         }
 
+        $this->aux->truncate();
         wp_die('true');
-
     }
 
     public function deploy(){
@@ -86,6 +114,10 @@ Class WpAjax {
         $file = $_GET['file_url'];
         if(!empty($file) && filter_var($file, FILTER_VALIDATE_URL)){
             $response = Curl::generate($file,false,false,false);
+            $data = array(
+                'path_static' => str_replace(site_url(),Helpers::getOption('path_rlout'),$file)
+            );
+            $this->aux->insert($data);
             wp_die($response);
         }
     }
@@ -112,14 +144,13 @@ Class WpAjax {
                 $urls[] = str_replace(site_url(), Helpers::getOption('replace_url_rlout'), $archive.'/index.json');
             }
         }
-
+        
         wp_die(json_encode($urls));
     }
 
     public function curl_json(){
         
         $url = Curl::generate_json($_GET['file']);
-
         wp_die($url);
     }
     
@@ -127,14 +158,25 @@ Class WpAjax {
         
         $taxonomy = $_GET['taxonomy'];
         $post_type = $_GET['post_type'];
+       
         $urls = array();
         
         // Subfiles
-        $files = explode(',', Helpers::getOption('subfiles_rlout'));
+        /*$files = explode(',', Helpers::getOption('subfiles_rlout'));
         foreach ($files as $key => $file) {
             
             if(!empty($file)){
-                $urls[] = $file;
+                $explode = explode("?", $file);
+                $urls[] = $explode[0];
+            }
+        }*/
+
+        // Importants pages
+        $importants = explode(',', Helpers::getOption('pages_important_rlout'));
+        foreach ($importants as $key => $important) {
+            
+            if(!empty($important)){
+                $urls[] = $important;
             }
         }
         
@@ -154,6 +196,7 @@ Class WpAjax {
                 }
             }
         }
+
         // Post_type
         $args_posts = array();
         if($post_type=='all'){
@@ -172,10 +215,29 @@ Class WpAjax {
             
             $urls = $this->recursive_post($post_type, $urls);
         }
+
+        if($_GET['status']=='continue'){
+            $urls_new = array();
+            $verify_files = $this->aux->list();
+            if(!empty($verify_files)){
+                $url_fisrt = site_url().str_replace(Helpers::getOption('path_rlout'),"",$verify_files[0]->path_static);
+                $key = array_search($url_fisrt, $urls);
+                foreach($urls as $key_url => $url){
+                    if($key<$key_url){
+                        $urls_new[] = $url;
+                    }
+                }
+                $urls = $urls_new;
+                $this->aux->truncate();
+            }
+        }else{
+            $this->aux->truncate();
+        }
         
         header("Content-type: application/json");
         wp_die(json_encode($urls));
     }
+   
     public function recursive_post($post_type, $urls=array(), $not_in=array()){
 
         $range = Helpers::getOption('range_posts_rlout');

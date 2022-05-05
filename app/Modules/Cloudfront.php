@@ -20,7 +20,6 @@ Class Cloudfront {
 	}
 
     static function invalid($response){
-
         // debug_print_backtrace();
         $DistributionId = Helpers::getOption('s3_distributionid_rlout');
 
@@ -34,33 +33,28 @@ Class Cloudfront {
 			$acl_key = Helpers::getOption('s3_acl_rlout');
 			$region = Helpers::getOption('s3_region_rlout');
 			
-			try{
-				$cloudFrontClient = new CloudFrontClient([
-					'region' => $region,
-					'version' => 'latest',
-					'credentials' => [
-						'key'    => $access_key,
-						'secret' => $secret_key,
-					]
-				]);
+			$cloudFrontClient = new CloudFrontClient([
+				'region' => $region,
+				'version' => 'latest',
+				'credentials' => [
+					'key'    => $access_key,
+					'secret' => $secret_key,
+				]
+			]);
 
-				$args = [
-					'DistributionId' => $DistributionId,
-					'InvalidationBatch' => [
-						'CallerReference' => $CallerReference,
-						'Paths' => [
-							'Items' => [$raiz],
-							'Quantity' => 1,
-						],
-					]
-				];
-				
-				return $cloudFrontClient->createInvalidation($args);
-			}
-			catch(\Aws\CloudFront\Exception\CloudFrontException $e) {
-				return false;
-			}
-
+			$args = [
+				'DistributionId' => $DistributionId,
+				'InvalidationBatch' => [
+					'CallerReference' => $CallerReference,
+					'Paths' => [
+						'Items' => [$raiz],
+						'Quantity' => 1,
+					],
+				]
+			];
+			
+			$cloudFrontClient->createInvalidation($args);
+			
 		}
     }
 }

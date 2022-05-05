@@ -35,7 +35,6 @@ Class Curl {
 	
 	// Recebe o Objeto (post ou term) e descobre a Url para enviar a função deploy_upload();
 	static function generate($object, $home=null, $items=true, $upload=true, $return=true){
-		update_option('robots_rlout', '0');
 		update_option('blog_public', '1');
 		
 		$url_post = url_to_postid($object);
@@ -107,24 +106,6 @@ Class Curl {
 			if(count($verify_files_point)>1){
 				$file_default = '';
 				$json_default = '';
-				
-				if($verify_files_point[1]=='xml'){
-					
-					$htt = str_replace('https:', '', site_url());
-					$htt = str_replace('http:', '', $htt);
-					$original_response = str_replace(site_url(), Helpers::getOption('replace_url_rlout'), $original_response);
-					$original_response = str_replace('href="'.$htt, 'href="'. Helpers::getOption('replace_url_rlout'), $original_response);
-					$xml = simplexml_load_string($response);
-					foreach($xml->sitemap as $sitemap){
-						if(isset($sitemap->loc)){
-							$url_map = (array) $sitemap->loc;
-							if(!empty($url_map)){
-								Curl::generate($url_map[0], null, false, false, false);
-							}
-						}
-					}
-					$response=$original_response;
-				}
 			}
 			
 			$explode_raiz = explode("/", $dir_base);
@@ -149,10 +130,9 @@ Class Curl {
 			if(empty(in_array($url, $ignore_files_rlout))){
 				
 				fwrite($file, $response);
-				fclose($file);
 				
 				if($upload==true){
-					S3::upload_file($dir_base . $file_default, false);
+					S3::upload_file($dir_base . $file_default, Helpers::getOption('s3_cloudfront_auto_rlout'));
 				}
 				
 				if(!empty($amp) && !empty($file_default) && !$search_amp){
@@ -173,6 +153,7 @@ Class Curl {
 					}
 				}
 			}
+			fclose($file);
 			
 			if($json_default!='' && is_object($object) && $upload==false || $json_default!='' && is_object($object) && $object->ID){
 				
@@ -191,12 +172,12 @@ Class Curl {
 				if(empty(in_array($url, $ignore_json_rlout))){
 					
 					fwrite($file_json,  $response_json);
-					fclose($file_json);
 					
 					if($upload==true){
 						S3::upload_file($dir_base . $json_default, true);
 					}
 				}
+				fclose($file_json);
 			}
 			
 			update_option('robots_rlout', '1');
@@ -221,11 +202,35 @@ Class Curl {
 			
 			$url = implode(".", $url_point);
 			
+			$rpl = Helpers::getOption('replace_url_rlout');
+			if(empty($rpl)){
+				$rpl = site_url().'/html';
+			}
+
 			$response = Curl::get($url);
 			
 			if ($response) {
-				
+
+				if(end($url_point)=='xml'){
+					
+					$htt = str_replace('https:', '', site_url());
+					$htt = str_replace('http:', '', $htt);
+					$original_response = str_replace(site_url(), $rpl, $response);
+					$original_response = str_replace('href="'.$htt, 'href="'. $rpl, $original_response);
+					$xml = simplexml_load_string($response);
+					foreach($xml->sitemap as $sitemap){
+						if(isset($sitemap->loc)){
+							$url_map = (array) $sitemap->loc;
+							if(!empty($url_map)){
+								$url_finaly = preg_replace('/^\s*\/\/<!\[CDATA\[([\s\S]*)\/\/\]\]>\s*\z/','$1', $url_map[0]);
+								Curl::deploy_upload($url_finaly);
+							}
+						}
+					}
+					$response=$original_response;
+				}
 				$response = Helpers::replace_json($response);
+				$response = str_replace(site_url(), $rpl,$response);
 				
 				$dir_base = Helpers::getOption('path_rlout');
 				if( is_dir($dir_base) === false ){
@@ -300,7 +305,7 @@ Class Curl {
 				fwrite($file, $response);
 				fclose($file);
 				
-				S3::upload_file($dir_base . '/' . $folders);
+				S3::upload_file($dir_base . '/' . $folders, Helpers::getOption('s3_cloudfront_auto_rlout'));
 			}
 		}
 		return $url;
@@ -320,14 +325,14 @@ Class Curl {
 		$object->post_type = $type;
 		$post_type = Posts::api($object);
 		if(!empty($post_type)){
-			wp_die($post_type[0]);
+			return $post_type[0];
 		}
 		
 		$object = new \StdClass();
 		$object->taxonomy = $type;
 		$taxonomy = Terms::api($object);
 		if(!empty($taxonomy)){
-			wp_die($taxonomy[0]);
+			return $taxonomy[0];
 		}
 		
 		$json_url = explode('index.json', $json_url);
@@ -347,7 +352,7 @@ Class Curl {
 				if($term_link==$json_url){
 					$term = Terms::api($term);
 					if(!empty($term)){
-						wp_die($term[0]);
+						return $term[0];
 					}
 				}
 			}

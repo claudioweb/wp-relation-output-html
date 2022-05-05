@@ -11,6 +11,10 @@ use WpRloutHtml\Essentials\WpAjax;
 use WpRloutHtml\Posts;
 use WpRloutHtml\Terms;
 
+// Modelules
+use WpRloutHtml\Modules\Logs;
+use WpRloutHtml\Modules\Auxiliar;
+ 
 Class App {
     
     // nome do plugin
@@ -20,6 +24,13 @@ Class App {
     static $repeat_files_rlout = array();
     
     public function __construct(){
+
+        // create table
+        $this->logs = new Logs;
+        $this->logs->createTable();
+        
+        $this->aux = new Auxiliar;
+        $this->aux->createTable();
 
         // Enquee de Js e Css
         $this->enqueue = new Enqueue;

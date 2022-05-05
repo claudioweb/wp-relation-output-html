@@ -14,7 +14,6 @@ Class Posts {
 	public $is_block_editor = false;
 	
 	public function __construct() {	
-
 		if(!function_exists('get_sample_permalink')) {
 			/** Load WordPress Bootstrap */
 			require_once ABSPATH . '/wp-load.php';
@@ -41,17 +40,22 @@ Class Posts {
 				$url_del = str_replace('%postname%',$link[1],$url_del);
 				setcookie('old_slug', $url_del);
 			}
+		}else{
+			setcookie('old_slug', null);
 		}
 	}
 
 	public function future_callback($post_id=null){
 
 		Helpers::importantfiles_generate();
+		Helpers::subfiles_generate('xml');
 
 		$this->publish_folder($post_id);
 	}
 
 	public function publish_folder($post_id=null) {
+
+		Helpers::subfiles_generate('xml');
 
 		$post_types = explode(',', Helpers::getOption('post_types_rlout'));
 
@@ -99,13 +103,10 @@ Class Posts {
 	public function create_folder($post_id=null) {
 
 		add_action('updated_post_meta', function($meta_id, $post_id, $meta_key) {
-			
+		
 			if($meta_key=='_edit_lock'):
 				$static = get_post_meta($post_id, '_static_output_html', true);
-				
-				if($static || (isset($_POST['static_output_html']) && $_POST['static_output_html'])):
-					if($static)
-						update_post_meta($post_id, '_static_output_html', 0);
+				if(!empty($static) || (isset($_POST['static_output_html']) && !empty($_POST['static_output_html']))):
 					
 					$this->publish_folder($post_id);
 				endif;
@@ -123,7 +124,6 @@ Class Posts {
 			require_once ABSPATH . 'wp-admin/includes/admin.php';
 		}
 		
-
 		$post = get_post($post_id);
 
 		$url_delete = get_sample_permalink($post);
@@ -135,9 +135,9 @@ Class Posts {
 	
 		$delete_old = $_COOKIE['old_slug'];
 
-		if($delete_old){
+		if(!empty($delete_old)){
 			$delete_old = Helpers::getOption('path_rlout').'/'.$delete_old;
-			if($delete_old!=$dir_base || !strpos($dir_base, $_POST['post_name'].'/')){
+			if($delete_old!=$dir_base || (!strpos($dir_base, $_POST['post_name'].'/') && !empty($_POST['post_name']))){
 				Helpers::rrmdir($delete_old);
 				S3::remove_file($delete_old . 'index.html');
 			}
@@ -173,6 +173,7 @@ Class Posts {
 				
 			}
 			
+			Helpers::subfiles_generate('xml');
 			Posts::api($post);
 		}
 	}
@@ -247,7 +248,7 @@ Class Posts {
 				fclose($file);
 				
 				if($upload==true){
-					S3::upload_file($file_raiz, true);
+					S3::upload_file($file_raiz, Helpers::getOption('s3_cloudfront_auto_rlout'));
 				}
 				
 				$urls[] = str_replace($dir_base,$replace_url,$file_raiz);
@@ -370,16 +371,13 @@ Class Posts {
 		$taxonomies = explode(",", Helpers::getOption('taxonomies_rlout'));
 		if(!empty($taxonomies) && $show_terms==true){
 			
-			foreach($taxonomies as $taxonomy){
-				$term = wp_get_post_terms($post->ID, array($taxonomy));
-				
-				if(!empty($term) && empty($term->errors)){
-					foreach($term as $tm_k => $tm){
-						$url = str_replace(site_url(),$rpl,get_term_link($tm)).'index.json';
-						$new_post[$taxonomy][$tm_k]['term_id'] = $tm->term_id;
-						$new_post[$taxonomy][$tm_k]['term_name'] = $tm->name;
-						$new_post[$taxonomy][$tm_k]['term_json'] = $url;
-					}
+			$term = wp_get_post_terms($post->ID, $taxonomies);
+			if(!empty($term) && empty($term->errors)){
+				foreach($term as $tm_k => $tm){
+					$url = str_replace(site_url(),$rpl,get_term_link($tm)).'index.json';
+					$new_post[$tm->taxonomy][$tm_k]['term_id'] = $tm->term_id;
+					$new_post[$tm->taxonomy][$tm_k]['term_name'] = $tm->name;
+					$new_post[$tm->taxonomy][$tm_k]['term_json'] = $url;
 				}
 			}
 		}
